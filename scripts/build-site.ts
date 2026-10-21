@@ -90,7 +90,7 @@ ${p.body}
 </div>
 </div>
 </footer>
-${p.noperch ? "" : `<script src="/perch.js" data-goal="#install" data-stickiness="0.6" defer></script>`}
+${p.noperch ? "" : `<script src="/perch.js" data-goal="#install" data-stickiness="0.6" data-tuner="true" defer></script>`}
 <script src="/site.js" defer></script>
 </body>
 </html>
@@ -107,7 +107,7 @@ const FAQ: [string, string][] = [
   ["What is Perch?", "Perch is a free, open-source pixel creature for websites. One script makes a small animated mascot that stands on your real headings, text and buttons, rides them while visitors scroll, and points at your call to action."],
   ["How do I add a mascot to my website?", "Run npx perch-pet in your project folder. It finds your layout file, copies the script into your public folder and adds one script tag. Without a repo, paste one script tag before the closing body tag."],
   ["Does Perch work with Next.js, Astro, SvelteKit, Nuxt and Vite?", "Yes. The setup command edits the right file for Next.js (app and pages router, including route groups), Astro, SvelteKit, Nuxt, Vite and plain HTML. For anything else, such as WordPress, Webflow or Shopify, paste the script tag."],
-  ["Will it slow down my site?", "The script is about 27 kB, 10 kB gzipped. It draws one small canvas, pauses in background tabs, adds no layout shift and makes no network requests. The tuner panel is a separate file that only loads on localhost."],
+  ["Will it slow down my site?", "The script is about 27 kB, 10 kB gzipped. It draws one small canvas, pauses in background tabs, adds no layout shift and makes no network requests. The tuner panel is a separate file that only loads on localhost (and on this demo site)."],
   ["Does it track my visitors?", "No. There is no tracking and no analytics. The only request it can make is one optional fetch of your own creature file."],
   ["Can I make my own character?", "Yes. On localhost, the tuner has a pixel editor for the body, legs, arms, colors and eyes. Download the JSON and run npx perch-pet creature ./creature.json."],
   ["Does it work on phones?", "Yes. It uses a smaller size on touch screens and follows taps and scrolling. You can turn it off on phones with data-mobile=\"false\"."],
@@ -138,11 +138,11 @@ pages.push({
 <section class="hero" style="padding-top:40px">
   <span class="eyebrow">free · open source · MIT</span>
   <h1>A pixel creature that lives on <em>your website.</em></h1>
-  <p class="lead">Perch stands on your <strong>real headings, text and buttons</strong>, rides them while you scroll, and points at your call to action. One script tag. Tune it live on localhost.</p>
+  <p class="lead">Perch stands on your <strong>real headings, text and buttons</strong>, rides them while you scroll, and points at your call to action. One script tag. Tune it live on localhost, or right here.</p>
   <div id="install" class="install"><span class="dollar" aria-hidden="true">$</span><code>npx perch-pet</code>${copy("npx perch-pet")}</div>
   <div class="cta-row">
     <a class="btn primary" href="${cfg.github}">View on GitHub</a>
-    <a class="btn" href="/?perch=tune">Tune the creature on this page</a>
+    <button type="button" class="btn" data-open-tuner>Open the tuner on this page</button>
   </div>
   <p class="fine">Next.js · Astro · SvelteKit · Nuxt · Vite · plain HTML · 10 kB gzipped · no tracking</p>
   <div class="hero-art"><img src="/assets/hero.svg" width="960" height="300" alt="A pixel octopus hopping between a heading, text lines, a card and a button on a web page"></div>
@@ -249,7 +249,7 @@ npx perch-pet --file "app/(marketing)/layout.tsx" --file "app/(app)/layout.tsx"<
 <h2>4. Tune it</h2>
 <p>Run <code>npm run dev</code>. A gear button appears at the bottom left on localhost. Swap the creature, show floors, pick your call to action with a click. Then run the command it shows, for example:</p>
 <div class="code"><pre>npx perch-pet set creature=cat stickiness=0.8 goal=".hero a"</pre></div>
-<div class="note">The tuner file is deployed with your site but is only loaded on localhost, local-network addresses and <code>?perch=tune</code>.</div>`,
+<div class="note">The tuner file is deployed with your site but is only loaded on localhost, local-network addresses and <code>?perch=tune</code>. Visitors on your live site never get it. This demo site is the one exception: it opts in with <code>data-tuner="true"</code>.</div>`,
   faq: [
     ["Does it work with the Next.js app router and route groups?", "Yes. It finds root layouts at any depth, including layouts inside route groups such as app/(site)/layout.tsx."],
     ["Does it need a client component?", "No. It uses next/script with strategy afterInteractive, so your layout stays a server component."],

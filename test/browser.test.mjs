@@ -193,3 +193,46 @@ test("tuner: pick a goal and an ignored card with the mouse, the creature goes t
     server.close();
   }
 });
+
+test("tuner stays off on a real host, and turns on only with data-tuner, ?perch=tune or localhost", { skip: !chrome || !existsSync(join(root, "dist/perch-tuner.js")) }, async () => {
+  const requested = [];
+  const server = createServer((req, res) => {
+    requested.push(req.url.split("?")[0]);
+    if (req.url === "/favicon.ico") { res.statusCode = 204; return res.end(); }
+    let p = req.url.split("?")[0];
+    if (p === "/") p = "/test/fixtures/acme.html";
+    if (p.startsWith("/fixtures/")) p = "/test" + p;
+    if (p === "/perch.js" || p === "/perch-tuner.js") p = "/dist" + p;
+    try { res.setHeader("content-type", types[extname(p)] ?? "text/plain"); res.end(readFileSync(join(root, p))); } catch { res.statusCode = 404; res.end(); }
+  }).listen(0);
+  const port = server.address().port;
+  // make "perch-example.com" point at this server, so the page sees a real, non-local host name
+  const browser = await chromium.launch({ executablePath: chrome, args: ["--host-resolver-rules=MAP perch-example.com 127.0.0.1"] });
+  const open = async (url) => {
+    const page = await browser.newPage({ viewport: { width: 1000, height: 700 } });
+    await page.goto(url);
+    await page.waitForSelector("[data-perch-root]", { state: "attached" });
+    await page.waitForTimeout(1500);
+    const tuner = await page.evaluate(() => !!document.querySelector("[data-perch-tuner]"));
+    await page.close();
+    return tuner;
+  };
+  try {
+    requested.length = 0;
+    assert.equal(await open(`http://perch-example.com:${port}/`), false, "no tuner on a real host name");
+    assert.ok(!requested.includes("/perch-tuner.js"), "visitors do not even download the tuner file");
+    assert.equal(await open(`http://perch-example.com:${port}/fixtures/tuner-on.html`), true, "data-tuner=true turns it on anywhere");
+    assert.equal(await open(`http://perch-example.com:${port}/?perch=tune`), true, "?perch=tune turns it on");
+    assert.equal(await open(`http://localhost:${port}/`), true, "localhost turns it on");
+    // the open-from-page event shows the panel
+    const page = await browser.newPage({ viewport: { width: 1000, height: 700 } });
+    await page.goto(`http://perch-example.com:${port}/fixtures/tuner-on.html`);
+    await page.waitForSelector("[data-perch-tuner]", { state: "attached" });
+    await page.evaluate(() => window.dispatchEvent(new Event("perch:tuner")));
+    assert.equal(await page.locator("[data-perch-tuner] .panel").isVisible(), true);
+    await page.close();
+  } finally {
+    await browser.close();
+    server.close();
+  }
+});

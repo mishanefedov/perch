@@ -60,6 +60,7 @@ for (const [name, c] of Object.entries(CASES)) {
     assert.equal(await run(["--creature", "blob", "--stickiness", "0.8"], dir, quiet), 0);
     const after = read(dir, c.layout);
     for (const re of c.expect) assert.match(after, re);
+    assert.doesNotMatch(after, /data-tuner|tuner/, "the setup command never turns the tuner on for production");
     for (const re of c.notExpect ?? []) assert.doesNotMatch(after, re);
     assert.match(after, /data-creature="blob"|"data-creature", "blob"/);
     assert.ok(existsSync(join(dir, c.pub ?? "public/perch.js")), "perch.js copied");
