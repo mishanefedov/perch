@@ -283,7 +283,6 @@ export function mountTuner(api: PerchApi, hooks: TunerHooks = {}): () => void {
 
   gear.addEventListener("click", () => show(true));
   $<HTMLButtonElement>(".x").addEventListener("click", () => show(false));
-  panel.addEventListener("keydown", (e) => { if (e.key === "Escape") { if (editor) closeEditor(); else show(false); } });
 
   // a page can open the panel with: window.dispatchEvent(new Event("perch:tuner"))
   const openFromPage = () => show(true);
