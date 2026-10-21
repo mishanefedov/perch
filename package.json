@@ -82,9 +82,12 @@
     "prepublishOnly": "bun run build && bun run typecheck && bun run test",
     "test": "node --test \"test/*.test.mjs\"",
     "site:build": "bun run scripts/build-site.ts",
-    "demo": "node scripts/demo.mjs"
+    "demo": "node scripts/demo.mjs",
+    "extension:build": "bun run scripts/build-extension.ts"
   },
   "devDependencies": {
+    "@types/chrome": "^0.3.6",
+    "fflate": "^0.8.3",
     "playwright-core": "^1.49.0",
     "typescript": "^5.6.0"
   }

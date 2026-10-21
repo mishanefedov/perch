@@ -2,7 +2,7 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
   "installCommand": "bun install --frozen-lockfile",
-  "buildCommand": "bun run build && bun run site:build",
+  "buildCommand": "bun run build && bun run extension:build && bun run site:build",
   "outputDirectory": "site-dist",
   "cleanUrls": true,
   "trailingSlash": true,
@@ -141,6 +141,19 @@
         {
           "key": "Access-Control-Allow-Origin",
           "value": "*"
+        }
+      ]
+    },
+    {
+      "source": "/perch-extension.zip",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/zip"
+        },
+        {
+          "key": "Content-Disposition",
+          "value": "attachment; filename=\"perch-extension.zip\""
         }
       ]
     }

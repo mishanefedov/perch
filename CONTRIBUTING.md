@@ -8,7 +8,7 @@ Thanks for helping. This is a small project, so the rules are short.
 bun install
 bun run build      # dist/
 bun run typecheck
-bun run test       # needs Chrome for the browser tests; they skip themselves if it is missing
+bun run test       # the browser tests need Chrome, the extension test needs Playwright Chromium (node node_modules/playwright-core/cli.js install chromium); they skip themselves if missing
 bun run demo       # builds and opens the landing page, which is the demo: http://localhost:4173/ (gear button = tuner)
 ```
 
@@ -18,6 +18,7 @@ bun run demo       # builds and opens the landing page, which is the demo: http:
 - `src/creature.ts` and `src/creatures/*.ts`: the sprite format and the built-in creatures.
 - `src/tuner.ts`, `src/editor.ts`, `src/selector.ts`: the localhost panel. Loaded only in development.
 - `cli/run.mjs`: the `perch-pet` command. `schema.json` is the source of truth for option names, types and limits.
+- `extension/` and `scripts/build-extension.ts`: the Chrome extension (Manifest V3). `bun run extension:build` writes `extension-dist/` and a zip. `node scripts/make-store-assets.mjs` takes the store screenshots. See `extension/README.md`.
 - `site/` and `scripts/build-site.ts`: the landing page and guides (plain HTML, no framework). `bun run site:build` writes `site-dist/`. The site runs Perch itself.
 - `test/fixtures/acme.html`: the page the browser tests and the README screenshots use.
 - `scripts/`: build, site, README assets (`bun run assets`), demo GIF.

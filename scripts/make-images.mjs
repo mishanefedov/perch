@@ -53,5 +53,13 @@ await og.setContent(`<body style="margin:0;width:1200px;height:630px;background:
 </body>`);
 await og.waitForTimeout(300);
 await og.screenshot({ path: "site/static/og.png" });
+
+// toolbar and store icons for the browser extension: the octopus on a transparent background
+for (const [size, pad] of [[16, 0], [32, 1], [48, 2], [128, 8]]) {
+  const p = await browser.newPage({ viewport: { width: size, height: size } });
+  await p.setContent(`<body style="margin:0;width:${size}px;height:${size}px;background:transparent;display:grid;place-items:center"><div style="width:${size - pad * 2}px">${logoSvg.replace(/width="\d+" height="\d+"/, 'width="100%" height="auto"')}</div></body>`);
+  await p.screenshot({ path: `extension/icons/icon-${size}.png`, omitBackground: true });
+  await p.close();
+}
 await browser.close();
 console.log("assets/tuner.png, assets/editor.png, assets/social-preview.png, site/static icons and og.png");

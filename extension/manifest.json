@@ -1,0 +1,27 @@
+{
+  "manifest_version": 3,
+  "name": "Perch: a pixel creature on any website",
+  "short_name": "Perch",
+  "version": "0.1.0",
+  "description": "A pixel creature that stands on the headings, text and buttons of the pages you visit. Free, open source, no tracking.",
+  "homepage_url": "https://gettheperch.com/extension/",
+  "icons": { "16": "icons/icon-16.png", "32": "icons/icon-32.png", "48": "icons/icon-48.png", "128": "icons/icon-128.png" },
+  "action": {
+    "default_title": "Perch",
+    "default_popup": "popup.html",
+    "default_icon": { "16": "icons/icon-16.png", "32": "icons/icon-32.png" }
+  },
+  "permissions": ["activeTab", "scripting", "storage"],
+  "optional_host_permissions": ["<all_urls>"],
+  "background": { "service_worker": "background.js" },
+  "commands": {
+    "toggle": {
+      "suggested_key": { "default": "Alt+Shift+P", "mac": "Alt+Shift+P" },
+      "description": "Show or hide the creature on this page"
+    },
+    "customize": {
+      "suggested_key": { "default": "Alt+Shift+T", "mac": "Alt+Shift+T" },
+      "description": "Open the customize panel on this page"
+    }
+  }
+}

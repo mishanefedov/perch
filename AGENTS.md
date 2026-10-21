@@ -49,4 +49,5 @@ Rules:
 - `src/tuner.ts`, `src/editor.ts`, `src/selector.ts` the localhost panel
 - `src/api.ts` public API, `src/entry-iife.ts` script-tag entry, `src/auto.ts` and `src/index.ts` bundler entries
 - `cli/run.mjs` the `perch-pet` command (candidate discovery, menu, install, set, creature, detect)
+- `extension/`, `scripts/build-extension.ts` the Chrome extension (`bun run extension:build`, test: `test/extension.test.mjs`)
 - `site/`, `scripts/build-site.ts` the website (`bun run site:build` -> `site-dist/`), `vercel.json` its deploy config

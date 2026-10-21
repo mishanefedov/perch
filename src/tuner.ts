@@ -74,7 +74,17 @@ export function outputs(opts: PerchOptions) {
   return { command: lines.join("\n"), tag, json };
 }
 
-export function mountTuner(api: PerchApi): () => void {
+/** For hosts that save settings themselves (the browser extension). */
+export interface TunerHooks {
+  /** called with the full option set after every change */
+  onChange?(opts: PerchOptions): void;
+  /** extension mode: no npx commands, nothing written to the page's own storage */
+  extension?: boolean;
+  /** false: no gear button; the panel is opened with the "perch:tuner" event */
+  gear?: boolean;
+}
+
+export function mountTuner(api: PerchApi, hooks: TunerHooks = {}): () => void {
   if (document.querySelector("[data-perch-tuner]")) return () => {};
   const host = document.createElement("div");
   host.setAttribute("data-perch-tuner", "");
@@ -123,7 +133,7 @@ export function mountTuner(api: PerchApi): () => void {
   const field = (id: string) => $<HTMLInputElement>("#" + id);
 
   const show = (open: boolean) => {
-    panel.hidden = !open; gear.hidden = open;
+    panel.hidden = !open; gear.hidden = open || hooks.gear === false;
     gear.setAttribute("aria-expanded", String(open));
     if (open) (panel.querySelector("select") as HTMLElement).focus(); else gear.focus();
   };
@@ -157,12 +167,13 @@ export function mountTuner(api: PerchApi): () => void {
     opts = next;
     api.init(opts); // replaces all options, so dropped keys really go back to their defaults
     sync();
+    hooks.onChange?.(opts);
   };
 
   $<HTMLSelectElement>("#creature").addEventListener("change", (e) => {
     const v = (e.target as HTMLSelectElement).value;
     if (v === "__custom") return;
-    try { localStorage.removeItem(STORE); } catch { /* storage can be blocked */ }
+    if (!hooks.extension) try { localStorage.removeItem(STORE); } catch { /* storage can be blocked */ }
     set("creature", v, v === "octopus");
   });
   for (const [id, def] of [["stickiness", d.stickiness], ["speed", d.speed], ["scale", d.scale]] as const) {
@@ -233,9 +244,10 @@ export function mountTuner(api: PerchApi): () => void {
   }));
   $<HTMLButtonElement>("[data-reset]").addEventListener("click", () => {
     opts = {};
-    try { localStorage.removeItem(STORE); } catch { /* storage can be blocked */ }
+    if (!hooks.extension) try { localStorage.removeItem(STORE); } catch { /* storage can be blocked */ }
     api.init({});
     sync();
+    hooks.onChange?.(opts);
   });
 
   // ---- the pixel editor ----
@@ -244,7 +256,8 @@ export function mountTuner(api: PerchApi): () => void {
   const saveCustom = (spec: CreatureSpec) => {
     opts = { ...opts, creature: spec };
     api.update({ creature: spec }); // swaps the drawing in place, no restart
-    try { localStorage.setItem(STORE, JSON.stringify(spec)); } catch { /* storage can be blocked */ }
+    if (!hooks.extension) try { localStorage.setItem(STORE, JSON.stringify(spec)); } catch { /* storage can be blocked */ }
+    hooks.onChange?.(opts);
   };
   const closeEditor = () => { editor?.el.remove(); editor = null; main.hidden = false; sync(); };
   $<HTMLButtonElement>("[data-edit]").addEventListener("click", () => {
@@ -257,7 +270,7 @@ export function mountTuner(api: PerchApi): () => void {
     editor.refresh();
   });
   // edits survive a page reload while you tune
-  try {
+  if (!hooks.extension) try {
     const saved = localStorage.getItem(STORE);
     if (saved && opts.creature === undefined) {
       const spec = JSON.parse(saved) as CreatureSpec;
@@ -272,6 +285,13 @@ export function mountTuner(api: PerchApi): () => void {
   // a page can open the panel with: window.dispatchEvent(new Event("perch:tuner"))
   const openFromPage = () => show(true);
   addEventListener("perch:tuner", openFromPage);
+
+  if (hooks.extension) {
+    out.hidden = true;
+    root.querySelectorAll<HTMLElement>("[data-copy]").forEach((b) => { b.hidden = true; });
+    $<HTMLElement>(".hint").textContent = "Saved automatically. The creature and sliders apply to every site. Goal, ignore and top space apply to this site only. Floors are blue, the goal is green.";
+  }
+  if (hooks.gear === false) gear.hidden = true;
 
   document.body.appendChild(host);
   sync();

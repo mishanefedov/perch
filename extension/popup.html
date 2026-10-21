@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Perch</title>
+<link rel="stylesheet" href="popup.css">
+</head>
+<body>
+<header>
+  <img src="icons/icon-32.png" width="24" height="24" alt="">
+  <strong>Perch</strong>
+  <a class="gh" href="https://github.com/mishanefedov/perch" target="_blank" rel="noopener">GitHub</a>
+</header>
+
+<section>
+  <p class="label" id="creature-label">Creature</p>
+  <div id="chips" role="radiogroup" aria-labelledby="creature-label"></div>
+</section>
+
+<section class="sliders">
+  <label>Size <input id="scale" type="range" min="1" max="5" step="1"><output id="scale-out"></output></label>
+  <label>Speed <input id="speed" type="range" min="0.5" max="2" step="0.1"><output id="speed-out"></output></label>
+  <label>Stickiness <input id="stickiness" type="range" min="0" max="1" step="0.05"><output id="stickiness-out"></output></label>
+</section>
+
+<button id="toggle" class="primary" type="button">Show on this page</button>
+<button id="customize" class="secondary" type="button">Customize this page…</button>
+
+<section class="checks">
+  <label><input type="checkbox" id="site"> Always on <span id="host">this site</span></label>
+  <label><input type="checkbox" id="all"> On every site <small>(asks for access to all sites)</small></label>
+</section>
+
+<p id="msg" role="status"></p>
+
+<footer>Want it on your own site? <a href="https://gettheperch.com/?from=extension" target="_blank" rel="noopener">gettheperch.com</a></footer>
+<script src="popup.js"></script>
+</body>
+</html>
