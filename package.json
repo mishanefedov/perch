@@ -1,0 +1,61 @@
+{
+  "name": "perch-pet",
+  "version": "0.1.0",
+  "description": "A pixel creature that lives on your website, stands on your real elements and points at your call to action. One script tag, tuned live on localhost. Octopus, cat, robot, ghost, alien, blob, or draw your own.",
+  "keywords": [
+    "mascot",
+    "website mascot",
+    "pixel art",
+    "pixel creature",
+    "desktop pet",
+    "web pet",
+    "animated character",
+    "cursor following",
+    "landing page",
+    "widget",
+    "nextjs",
+    "react",
+    "astro",
+    "sveltekit",
+    "nuxt",
+    "vite",
+    "vanilla-js",
+    "typescript",
+    "canvas",
+    "cli",
+    "agent-friendly"
+  ],
+  "homepage": "https://github.com/mishanefedov/perch#readme",
+  "bugs": "https://github.com/mishanefedov/perch/issues",
+  "repository": { "type": "git", "url": "git+https://github.com/mishanefedov/perch.git" },
+  "license": "MIT",
+  "author": "Michael Nefedov (https://github.com/mishanefedov)",
+  "type": "module",
+  "bin": { "perch-pet": "cli/perch-pet.mjs" },
+  "main": "./dist/esm/index.js",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/types/index.d.ts",
+  "exports": {
+    ".": { "types": "./dist/types/index.d.ts", "import": "./dist/esm/index.js", "default": "./dist/esm/index.js" },
+    "./auto": { "types": "./dist/types/auto.d.ts", "import": "./dist/esm/auto.js", "default": "./dist/esm/auto.js" },
+    "./perch.js": "./dist/perch.js",
+    "./perch-tuner.js": "./dist/perch-tuner.js",
+    "./schema.json": "./schema.json",
+    "./package.json": "./package.json"
+  },
+  "sideEffects": ["./dist/esm/auto.js", "./dist/perch.js", "./dist/perch-tuner.js"],
+  "files": ["dist", "cli", "schema.json", "llms.txt", "llms-full.txt", "AGENTS.md", "README.md", "LICENSE", "CHANGELOG.md"],
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "build": "bun run scripts/build.ts",
+    "typecheck": "tsc --noEmit",
+    "assets": "bun run scripts/make-assets.ts",
+    "prepublishOnly": "bun run build && bun run typecheck && bun run test",
+    "test": "node --test \"test/*.test.mjs\"",
+    "demo": "bun run build && python3 -m http.server 4173"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.49.0",
+    "typescript": "^5.6.0"
+  }
+}

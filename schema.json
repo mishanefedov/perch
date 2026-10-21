@@ -1,0 +1,24 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/mishanefedov/perch/blob/main/schema.json",
+  "title": "perch-pet options",
+  "description": "Options for the perch-pet script. Set them as data-* attributes on the script tag (data-stickiness=\"0.8\"), with `npx perch-pet set key=value`, or pass them to Perch.init({...}).",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "creature": { "enum": ["octopus", "blob", "cat", "ghost", "robot", "alien"], "default": "octopus", "description": "Built-in creature. For your own, use creatureUrl." },
+    "creatureUrl": { "type": "string", "description": "URL of a creature JSON file made in the tuner. `npx perch-pet creature ./creature.json` sets this up." },
+    "scale": { "type": "integer", "minimum": 1, "maximum": 8, "description": "Pixel size of one sprite pixel. Default 3 on desktop, 2 on phones." },
+    "stickiness": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.5, "description": "How long it stays on a spot before moving on. 0 restless, 1 stays long." },
+    "speed": { "type": "number", "minimum": 0.2, "maximum": 4, "default": 1, "description": "Walk speed multiplier." },
+    "goal": { "type": "string", "description": "CSS selector of the call to action it points at. Default: found automatically." },
+    "platforms": { "type": "string", "description": "Extra CSS selector for things it may stand on, added to the automatic ones." },
+    "ignore": { "type": "string", "description": "CSS selector for things it must never stand on or point at." },
+    "topOffset": { "type": "number", "minimum": 0, "description": "Pixels kept free at the top of the screen. Default: fixed headers are found automatically." },
+    "mobile": { "type": "boolean", "default": true, "description": "Run on phones and touch screens." },
+    "draggable": { "type": "boolean", "default": true, "description": "Let visitors drag and throw it." },
+    "bounce": { "type": "boolean", "default": true, "description": "Elements dip a few pixels when it lands on them." },
+    "zIndex": { "type": "integer", "default": 9999, "description": "CSS z-index of the creature layer." },
+    "tuner": { "type": "boolean", "description": "Script-tag only. Force the tuner panel on (true) or off (false). Default: on for localhost, off elsewhere." }
+  }
+}

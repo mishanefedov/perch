@@ -1,0 +1,21 @@
+name: Bug or "it looks wrong on my site"
+description: The creature stands in the wrong place, points at the wrong thing, or breaks something.
+labels: [bug]
+body:
+  - type: input
+    id: url
+    attributes: { label: Page URL (or a minimal HTML example), placeholder: https://example.com }
+    validations: { required: true }
+  - type: textarea
+    id: what
+    attributes: { label: What happened, description: What did you expect instead? A screenshot with "Show floors" switched on in the tuner helps a lot. }
+    validations: { required: true }
+  - type: textarea
+    id: detect
+    attributes: { label: Output of `npx perch-pet detect`, render: json }
+  - type: textarea
+    id: console
+    attributes: { label: Browser console errors, render: text }
+  - type: input
+    id: browser
+    attributes: { label: Browser and version }

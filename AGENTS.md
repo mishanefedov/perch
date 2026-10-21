@@ -1,0 +1,47 @@
+# AGENTS.md
+
+Two jobs an agent does with this repo: add perch-pet to someone's site, or change perch-pet itself.
+
+## Add perch-pet to a site
+
+Run the command. Do not hand-write the script tag, do not add a skill file.
+
+```bash
+npx perch-pet detect                 # JSON: framework, layoutFile, publicDir, installed, options
+npx perch-pet --dry                  # preview
+npx perch-pet                        # install: copies perch.js (+ localhost tuner), adds one tag
+npx perch-pet set stickiness=0.8     # change options; validated against schema.json
+npx perch-pet --remove               # undo
+```
+
+- It only edits files inside the project folder. It prints each change.
+- If `detect` returns `"framework": null`, copy `dist/perch.js` to the static folder and add `<script src="/perch.js" defer></script>` before `</body>`.
+- Verify in the browser: the creature should stand on headings, text and cards and point at the main button. If it picks wrong, use `set goal=".selector"` or `set ignore=".selector"`. The tuner (gear button on localhost) has "Show floors" and click-to-pick selectors.
+- Full option list: `npx perch-pet options` or `schema.json`. Everything in one text file: `llms-full.txt`.
+
+## Change perch-pet itself
+
+```bash
+bun install
+bun run typecheck
+bun run build          # dist/perch.js, dist/perch-tuner.js, dist/esm, dist/types
+bun run test           # CLI tests (generated projects) + Chrome tests (skipped without Chrome)
+bun run demo           # http://localhost:4173/demo/
+```
+
+Rules:
+
+- `schema.json` is the source of truth for option names, types and limits. The CLI reads it. Keep `src/config.ts` in step (a test checks the creature list).
+- The runtime must stay dependency-free and make no network calls. The tuner stays out of `perch.js`: it is its own bundle, loaded only in development.
+- Do not edit the page's markup from the runtime. The creature layer is one fixed canvas.
+- Every CLI change needs a case in `test/cli.test.mjs` or `test/commands.test.mjs`. Every behaviour change in the engine or tuner needs a check in `test/browser.test.mjs`.
+- A new creature: copy `src/creatures/blob.ts`, register it in `src/config.ts`, add it to `schema.json`, run the tests (they check row widths, eye and arm placement), then `bun run assets`.
+- README visuals come from `bun run assets` (SVGs) and `scripts/record-demo.mjs`, `scripts/make-images.mjs` (GIF and screenshots; they need the demo server running). Do not hand-edit generated files in `assets/`.
+- Git: small commits on a branch, open a PR. Never force-push `main`.
+
+## Layout
+
+- `src/engine.ts` physics and behaviour, `src/scanner.ts` floors and goals, `src/creature.ts` sprite format, `src/creatures/` built-ins
+- `src/tuner.ts`, `src/editor.ts`, `src/selector.ts` the localhost panel
+- `src/api.ts` public API, `src/entry-iife.ts` script-tag entry, `src/auto.ts` and `src/index.ts` bundler entries
+- `cli/run.mjs` the `perch-pet` command

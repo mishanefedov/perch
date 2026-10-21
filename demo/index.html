@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Perch demo</title>
+<style>
+  body { margin: 0; font: 18px/1.6 system-ui, sans-serif; color: #111; background: #fafaf7; }
+  header { position: sticky; top: 0; background: #fff; border-bottom: 1px solid #ddd; padding: 16px 24px; display: flex; gap: 24px; z-index: 5; }
+  header b { margin-right: auto; }
+  main { max-width: 760px; margin: 0 auto; padding: 0 24px 120px; }
+  h1 { font-size: 48px; line-height: 1.1; margin: 80px 0 16px; }
+  h2 { margin-top: 72px; }
+  form { display: flex; gap: 8px; margin: 32px 0; }
+  input { flex: 1; padding: 12px; border: 1px solid #bbb; border-radius: 6px; font: inherit; }
+  button { padding: 12px 20px; border: 0; border-radius: 6px; background: #111; color: #fff; font: inherit; cursor: pointer; }
+  .card { border: 1px solid #ddd; background: #fff; border-radius: 10px; padding: 20px; margin: 16px 0; }
+  footer { border-top: 1px solid #ddd; padding: 40px 24px; text-align: center; }
+</style>
+</head>
+<body>
+<header><b>Acme</b><a href="#a">Product</a><a href="#b">Pricing</a><a href="#c">Docs</a></header>
+<main>
+  <h1>Ship your product faster</h1>
+  <p>Acme turns a messy pile of tasks into a clean plan. Join the waitlist and we will let you in early.</p>
+  <form onsubmit="return false"><input placeholder="you@company.com" aria-label="Email"><button type="submit">Join the waitlist</button></form>
+  <h2 id="a">What you get</h2>
+  <div class="card"><h3>Plans in minutes</h3><p>Paste your backlog and get a ranked plan with owners and dates.</p></div>
+  <div class="card"><h3>Fewer meetings</h3><p>Status updates write themselves from the tools your team already uses.</p></div>
+  <div class="card"><h3>One source of truth</h3><p>Everyone sees the same list, the same priorities and the same deadlines.</p></div>
+  <h2 id="b">Pricing</h2>
+  <p>There is no list price. Tell us what you need and we will send a quote within one working day.</p>
+  <p><a href="#" class="btn" style="display:inline-block;padding:12px 20px;background:#2563eb;color:#fff;border-radius:6px;text-decoration:none">Book a demo</a></p>
+  <h2 id="c">Docs</h2>
+  <p>Start with the quickstart. It takes about five minutes and needs no credit card.</p>
+  <p>Questions? Write to hello@acme.test and a human will answer.</p>
+  <h2>More</h2>
+  <p>Another paragraph so the page is long enough to scroll a few screens down and test the scroll behaviour.</p>
+  <p>And one more paragraph, because scrolling is where the creature gets squashed and knocked around.</p>
+</main>
+<footer>© Acme</footer>
+<script src="/dist/perch.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,27 @@
+# perch-pet
+
+> A pixel creature for websites. One script tag adds an animated mascot that stands on the page's real elements (headings, text, cards, buttons, forms), rides them while scrolling and points at the call to action. Deterministic setup with `npx perch-pet`, no LLM and no network calls at runtime. On localhost a gear button opens a tuner to swap creatures, draw your own, and see which elements count as floors.
+
+To add it to a site, run `npx perch-pet` in the project folder. Do not write the integration by hand and do not create a skill file. Check what it found first with `npx perch-pet detect` (JSON). Change options with `npx perch-pet set key=value`. Undo with `npx perch-pet --remove`.
+
+## Docs
+
+- [README](https://github.com/mishanefedov/perch#readme): install, options, tuner, frameworks, limits
+- [Full docs as one text file](https://raw.githubusercontent.com/mishanefedov/perch/main/llms-full.txt): everything an agent needs, no images
+- [Options schema](https://raw.githubusercontent.com/mishanefedov/perch/main/schema.json): JSON Schema with every option, type, limit and default
+- [AGENTS.md](https://raw.githubusercontent.com/mishanefedov/perch/main/AGENTS.md): how to install it for a user and how to work on this repo
+
+## Commands
+
+- `npx perch-pet detect`: JSON with framework, layout file, public folder, installed or not, current options
+- `npx perch-pet --dry`: preview the change
+- `npx perch-pet`: install (copies perch.js and the localhost tuner, adds one script tag)
+- `npx perch-pet set stickiness=0.8 creature=cat`: change options, validated against the schema
+- `npx perch-pet creature ./creature.json`: use a creature drawn in the tuner
+- `npx perch-pet options`: print the options schema
+- `npx perch-pet --remove`: undo
+
+## Optional
+
+- [Source](https://github.com/mishanefedov/perch/tree/main/src): engine, scanner, creatures, tuner
+- [Changelog](https://raw.githubusercontent.com/mishanefedov/perch/main/CHANGELOG.md)

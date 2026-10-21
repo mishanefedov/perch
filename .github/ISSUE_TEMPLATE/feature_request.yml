@@ -1,0 +1,11 @@
+name: Feature request
+description: A new creature, option, framework setup or behaviour.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: want
+    attributes: { label: What do you want to do, description: Describe the result you want, not the implementation. }
+    validations: { required: true }
+  - type: textarea
+    id: why
+    attributes: { label: Why is the current behaviour not enough }

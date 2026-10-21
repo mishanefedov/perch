@@ -1,0 +1,73 @@
+perch-pet: full documentation for agents
+=========================================
+
+What it is
+----------
+A script that adds a pixel creature (octopus, blob, cat, ghost, robot, alien, or a custom one) to a website. The creature stands on real page elements (h1-h6, p, li, blockquote, figure, img, video, table, pre, form, button, input, textarea, select, links that look like buttons), rides them while the page scrolls, jumps between them, points at the call to action and follows the cursor with its eyes. Visitors can drag and throw it.
+
+It runs in the visitor's browser. No model, no network calls (one optional fetch of a creature JSON file from the same site), no tracking. It never edits the page's markup. It draws one fixed canvas with pointer-events none.
+
+How to add it to a site (do this)
+---------------------------------
+1. In the project folder run: npx perch-pet detect
+   Output is JSON: { framework, layoutFile, publicDir, installed, options }.
+   framework is one of: next-app, next-pages, next-pages-new, html (Astro, SvelteKit, Vite, plain HTML), nuxt, or null.
+   If framework is null the project is not supported by the command (Remix, Gatsby, WordPress, Webflow, Shopify...): copy node_modules/perch-pet/dist/perch.js to the static folder as perch.js and add <script src="/perch.js" defer></script> before </body>.
+2. Preview: npx perch-pet --dry
+3. Install: npx perch-pet
+   This copies perch.js and perch-tuner.js into the public folder and adds one script tag to the layout file. Add --no-tuner to skip the tuner file.
+4. Run the dev server and look at the page. On localhost a gear button appears at the bottom left (the tuner).
+5. Change options: npx perch-pet set stickiness=0.8 creature=cat goal=".hero a.cta"
+   Values are validated against schema.json. Reset: npx perch-pet set --reset
+6. Undo everything: npx perch-pet --remove
+
+Bundler alternative (no script tag): import "perch-pet/auto";  (starts it with window.PERCH options or defaults, and shows the tuner on localhost)
+API: import { init, update, destroy, celebrate, debug } from "perch-pet";
+
+Options (also in schema.json)
+-----------------------------
+creature     octopus | blob | cat | ghost | robot | alien. Default octopus.
+creatureUrl  URL of a creature JSON file. Set by: npx perch-pet creature ./creature.json
+stickiness   0 to 1, default 0.5. How long it stays on a spot.
+speed        0.2 to 4, default 1.
+scale        1 to 8, default 3 (2 on phones). Size of one sprite pixel.
+goal         CSS selector of the call to action. Default: found automatically (submit button in a form, or a button with text like sign up, get started, book a demo, join the waitlist). data-perch on an element also marks a goal.
+platforms    extra CSS selector for things it may stand on.
+ignore       CSS selector for things it must avoid. data-perch-ignore on an element also works.
+topOffset    pixels kept free at the top. Default: fixed or sticky headers are found automatically.
+mobile       default true. false turns it off on phones and touch screens.
+draggable    default true.
+bounce       default true. Elements dip a few pixels when it lands.
+zIndex       default 9999.
+tuner        script tag only. true or false forces the localhost panel on or off.
+
+Options are written as data-* attributes on the script tag (data-top-offset for topOffset), for example:
+<script src="/perch.js" data-creature="robot" data-stickiness="0.8" defer></script>
+
+The tuner (development only)
+----------------------------
+Shown on localhost, 127.0.0.1, *.local, *.test, *.localhost, 192.168.*, 10.*, or with ?perch=tune in the URL (?perch=off clears it). Never loaded for live visitors unless data-tuner="true".
+Features: swap creature, pixel editor (body, two leg frames, five arm poses, palette, eye colours, eye position, undo), "Show floors" overlay (blue lines are floors, green boxes are goals), "Pick" buttons that write a CSS selector for the element you click, sliders and toggles, and a save command such as: npx perch-pet set creature=cat stickiness=0.8
+For a drawn creature: Download JSON, then npx perch-pet creature ./creature.json
+
+Custom creature format
+----------------------
+JSON with: name, cols, rows, offset [x, y], palette { char: css colour }, body (array of equal-width strings, "." empty), legs (exactly two frames, arrays of strings), arms { rest, point, wave, hold, brace } as lists of [x, y] canvas coordinates for the right arm (the left is mirrored), eyes { left: [x, y], right: [x, y] } (each eye is 4x4), eyeColors { white, pupil }, optional armColor. Validate with validate(spec) from "perch-pet".
+
+Troubleshooting
+---------------
+- Creature stands on the wrong thing or points at the wrong button: open the tuner, switch on "Show floors", then use Pick for Goal or Ignore, and save with the command it shows.
+- Nothing appears: check the console. The tag must load /perch.js from the same origin. A strict Content-Security-Policy needs script-src 'self'.
+- It does not run on phones: mobile may be false, or the screen is under 640 px wide with mobile=false.
+- Reduced motion: with prefers-reduced-motion it sits still near the call to action by design.
+- Not detected by the command: see "How to add it" step 1 for the manual one-line install.
+
+Limits
+------
+Main document only (no iframes, no shadow DOM). Tuned on a handful of real pages. Sticky headers, popups and canvas-only pages are the weak spots.
+
+Links
+-----
+Repo: https://github.com/mishanefedov/perch
+npm: https://www.npmjs.com/package/perch-pet
+License: MIT
