@@ -8,6 +8,9 @@
 - `set`, `creature` and `--remove` act on every installed place.
 - Fix: a Next.js project with only a route-group layout was reported as "not supported".
 - `npm run demo` now builds and opens the landing page, which is the demo.
+- Tuner: while picking, **↑** selects the parent element and **↓** goes back; the bar shows the selector and how many elements it matches; a "matches N elements" line sits under the Goal and Ignore fields.
+- Fix: the selector builder could return a selector that matched many elements (for example `p`). It now always matches exactly the picked element.
+- After the creature (re)starts, it goes to the goal first, so a newly picked goal is visible at once.
 - Website: landing page, framework guides, an agent guide, `llms.txt`, sitemap and structured data (`site/`, `bun run site:build`).
 
 ## 0.1.0

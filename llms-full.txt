@@ -50,6 +50,7 @@ Options are written as data-* attributes on the script tag (data-top-offset for 
 The tuner (development only)
 ----------------------------
 Shown on localhost, 127.0.0.1, *.local, *.test, *.localhost, 192.168.*, 10.*, or with ?perch=tune in the URL (?perch=off clears it). Never loaded for live visitors unless data-tuner="true".
+While picking, the arrow keys move to the parent (up) or back (down); the bar shows the selector and how many elements it matches.
 Features: swap creature, pixel editor (body, two leg frames, five arm poses, palette, eye colours, eye position, undo), "Show floors" overlay (blue lines are floors, green boxes are goals), "Pick" buttons that write a CSS selector for the element you click, sliders and toggles, and a save command such as: npx perch-pet set creature=cat stickiness=0.8
 For a drawn creature: Download JSON, then npx perch-pet creature ./creature.json
 

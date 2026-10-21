@@ -28,39 +28,39 @@ cdp.on("Page.screencastFrame", async ({ data, metadata, sessionId }) => {
   frames.push({ t: metadata.timestamp, data });
   await cdp.send("Page.screencastFrameAck", { sessionId }).catch(() => {});
 });
-await cdp.send("Page.startScreencast", { format: "jpeg", quality: 85, maxWidth: 960, maxHeight: 600, everyNthFrame: 1 });
+await cdp.send("Page.startScreencast", { format: "jpeg", quality: 85, maxWidth: 1000, maxHeight: 640, everyNthFrame: 1 });
 const t = (s) => page.locator(`[data-perch-tuner] ${s}`);
-const move = async (x, y, steps = 25) => { await page.mouse.move(x, y, { steps }); };
+const wait = (ms) => page.waitForTimeout(ms);
+const move = (x, y, steps = 24) => page.mouse.move(x, y, { steps });
+const center = async (sel) => { const b = await page.locator(sel).first().boundingBox(); return [b.x + b.width / 2, b.y + b.height / 2]; };
 
-await page.goto("http://localhost:4173/fixtures/acme.html");
+await page.goto("http://localhost:4173/fixtures/hero.html");
 await page.waitForSelector("[data-perch-tuner]", { state: "attached" });
-await page.mouse.move(700, 300);
-await page.waitForTimeout(2400);
-// eyes follow the cursor
-await move(120, 420, 30); await page.waitForTimeout(300);
-await move(820, 200, 30); await page.waitForTimeout(400);
-// click a card: it jumps there
-await page.mouse.click(520, 520); await page.waitForTimeout(1500);
-// scroll: it rides the elements
-for (let i = 0; i < 10; i++) { await page.mouse.wheel(0, 90); await page.waitForTimeout(60); }
-await page.waitForTimeout(800);
-for (let i = 0; i < 10; i++) { await page.mouse.wheel(0, -90); await page.waitForTimeout(60); }
-await page.waitForTimeout(800);
-// the tuner
-await t(".gear").click(); await page.waitForTimeout(700);
-await t("#creature").selectOption("cat"); await page.waitForTimeout(1200);
-await t("#floors").check(); await page.waitForTimeout(1500);
-await t("#creature").selectOption("alien"); await page.waitForTimeout(1200);
-await t("#floors").uncheck();
-// the editor
-await t("[data-edit]").click(); await page.waitForTimeout(800);
-const box = await t(".ed canvas").boundingBox();
-const cell = (cx, cy) => [box.x + ((cx + 0.5) / 28) * box.width, box.y + ((cy + 0.5) / 16) * box.height];
-await page.locator("[data-perch-tuner] .sw label").nth(1).locator(".pick").click();
-for (const [cx, cy] of [[8, 4], [9, 4], [10, 4], [13, 4], [14, 4], [15, 4], [17, 4], [18, 4], [19, 4]]) { const [x, y] = cell(cx, cy); await page.mouse.click(x, y); await page.waitForTimeout(150); }
-await page.waitForTimeout(1500);
-await page.keyboard.press("Escape"); await page.waitForTimeout(800);
-await t("#creature").selectOption("octopus"); await page.waitForTimeout(1800);
+await page.mouse.move(820, 330);
+await wait(2600);                                   // it lands on the form and points at the button
+
+// open the tuner and look at what it found
+await move(40, 600); await t(".gear").click(); await wait(500);
+await t("#floors").check(); await wait(1800);       // blue floors, green goal
+
+// pick the goal with a click
+await t("[data-pick=goal]").click(); await wait(500);
+for (const sel of ["h1", ".card >> nth=1", "form button", "a.btn"]) { const [x, y] = await center(sel); await move(x, y, 22); await wait(450); }
+const [gx, gy] = await center("a.btn");
+await page.mouse.click(gx, gy);                     // "Book a demo" is the new goal
+await wait(6200);                                   // it walks over and points at it
+
+// pick something to ignore
+await t("[data-pick=ignore]").click(); await wait(500);
+const [ix, iy] = await center(".card >> nth=0");
+await move(ix, iy + 8, 26); await wait(900);        // hovering the text inside the card
+await page.keyboard.press("ArrowUp"); await wait(1400); // ↑ selects the whole card
+await page.mouse.click(ix, iy + 8);                 // the first card is now off limits
+await wait(3600);
+
+// the saved command
+await t(".out").scrollIntoViewIfNeeded().catch(() => {});
+await wait(2600);
 await cdp.send("Page.stopScreencast");
 await ctx.close();
 await browser.close();

@@ -2,7 +2,7 @@ import type { PerchApi } from "./api";
 import type { PerchOptions } from "./config";
 import { validate, type CreatureSpec } from "./creature";
 import { createEditor, EDITOR_CSS, type EditorHandle } from "./editor";
-import { selectorFor } from "./selector";
+import { countMatches, selectorFor } from "./selector";
 
 // The tuner: a small gear button on localhost. Change values, watch the creature react, see
 // which elements it treats as floors, then copy one command that saves the result.
@@ -45,6 +45,8 @@ button.on { background: #dbeafe; border-color: #3b82f6; }
 .box { position: fixed; pointer-events: none; border: 2px solid #f59e0b; background: #f59e0b22; border-radius: 3px; z-index: 2; }
 .tip { position: fixed; left: 50%; top: 14px; transform: translateX(-50%); background: #111; color: #fff; padding: 6px 12px; border-radius: 8px; z-index: 3; }
 .copied { color: #15803d; }
+.match { grid-column: 2 / 4; margin: -4px 0 0; font-size: 12px; color: #666; min-height: 14px; }
+.match.warn { color: #b45309; } .match.bad { color: #b91c1c; }
 @media (prefers-color-scheme: dark) {
   .panel { background: #1b1b1d; color: #eee; border-color: #fff2; }
   .row label, .checks label { color: #ccc; } .val, .hint { color: #999; }
@@ -99,8 +101,8 @@ export function mountTuner(api: PerchApi): () => void {
       <label><input type="checkbox" id="mobile"> Run on phones</label>
       <label><input type="checkbox" id="floors"> Show floors</label>
     </div>
-    <div class="row wide"><label for="goal">Goal</label><input id="goal" type="text" placeholder="auto"><button class="b" data-pick="goal" title="Click an element on the page">Pick</button></div>
-    <div class="row wide"><label for="ignore">Ignore</label><input id="ignore" type="text" placeholder="none"><button class="b" data-pick="ignore" title="Click an element on the page">Pick</button></div>
+    <div class="row wide"><label for="goal">Goal</label><input id="goal" type="text" placeholder="auto"><button class="b" data-pick="goal" title="Click an element on the page">Pick</button><p class="match" data-match="goal"></p></div>
+    <div class="row wide"><label for="ignore">Ignore</label><input id="ignore" type="text" placeholder="none"><button class="b" data-pick="ignore" title="Click an element on the page">Pick</button><p class="match" data-match="ignore"></p></div>
     <div class="row"><label for="topOffset">Top space</label><input id="topOffset" type="number" min="0" step="4" placeholder="auto"><span class="val">px</span></div>
     <div class="sep"></div>
     <textarea class="out" readonly aria-label="Command that saves these values"></textarea>
@@ -138,6 +140,12 @@ export function mountTuner(api: PerchApi): () => void {
     field("goal").value = opts.goal ?? "";
     field("ignore").value = opts.ignore ?? "";
     field("topOffset").value = opts.topOffset === undefined ? "" : String(opts.topOffset);
+    for (const k of ["goal", "ignore"] as const) {
+      const el = $<HTMLElement>(`[data-match=${k}]`), sel = opts[k];
+      const n = sel ? countMatches(sel) : -1;
+      el.className = "match" + (n === 0 ? " bad" : k === "goal" && n > 1 ? " warn" : "");
+      el.textContent = n < 0 ? "" : n === 0 ? "matches nothing on this page" : `matches ${n} element${n === 1 ? "" : "s"}${k === "goal" && n > 1 ? " (all count as goals)" : ""}`;
+    }
     root.querySelectorAll<HTMLElement>(".val[data-for]").forEach((el) => { el.textContent = field(el.dataset.for!).value; });
     out.value = outputs(opts).command || "No changes from the defaults.";
   };
@@ -174,27 +182,38 @@ export function mountTuner(api: PerchApi): () => void {
     box.className = "box";
     const tip = document.createElement("div");
     tip.className = "tip";
-    tip.textContent = `Click the ${which === "goal" ? "call to action" : "element to ignore"}. Esc cancels.`;
+    tip.textContent = `Click the ${which === "goal" ? "call to action" : "element to ignore"}. ↑ picks the parent, ↓ goes back. Esc cancels.`;
     root.append(layer, box, tip);
     let target: Element | null = null;
+    let trail: Element[] = []; // elements below the current pick, for ↓
     const at = (x: number, y: number) => {
       layer.style.pointerEvents = "none";
       const el = document.elementFromPoint(x, y);
       layer.style.pointerEvents = "";
       return el && !el.closest("[data-perch-root]") ? el : null;
     };
-    const move = (e: MouseEvent) => {
-      target = at(e.clientX, e.clientY);
+    const outline = () => {
       const r = target?.getBoundingClientRect();
       box.style.display = r ? "" : "none";
       if (r) Object.assign(box.style, { left: r.left + "px", top: r.top + "px", width: r.width + "px", height: r.height + "px" });
+      tip.textContent = target ? `${selectorFor(target)}   (matches ${countMatches(selectorFor(target))}). Click to pick, ↑ parent, ↓ child, Esc cancels.` : tip.textContent;
+    };
+    let lastX = -1, lastY = -1;
+    const move = (e: MouseEvent) => {
+      if (e.clientX === lastX && e.clientY === lastY) return; // a click re-reports the same spot: keep the ↑ choice
+      lastX = e.clientX; lastY = e.clientY;
+      target = at(e.clientX, e.clientY); trail = []; outline();
     };
     const done = () => { layer.remove(); box.remove(); tip.remove(); removeEventListener("keydown", key, true); show(true); };
-    const key = (e: KeyboardEvent) => { if (e.key === "Escape") { e.stopPropagation(); done(); } };
+    const key = (e: KeyboardEvent) => {
+      if (e.key === "Escape") { e.stopPropagation(); done(); }
+      else if (e.key === "ArrowUp" && target?.parentElement && target.parentElement !== document.body) { e.preventDefault(); trail.push(target); target = target.parentElement; outline(); }
+      else if (e.key === "ArrowDown" && trail.length) { e.preventDefault(); target = trail.pop()!; outline(); }
+    };
     layer.addEventListener("mousemove", move);
     layer.addEventListener("click", (e) => {
       e.preventDefault(); e.stopPropagation();
-      const el = at(e.clientX, e.clientY);
+      const el = target ?? at(e.clientX, e.clientY);
       done();
       if (!el) return;
       const sel = selectorFor(el);

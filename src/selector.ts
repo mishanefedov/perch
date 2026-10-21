@@ -23,6 +23,17 @@ function segment(el: Element, withClasses: number): string {
   return tag + classes.map((c) => "." + esc(c)).join("");
 }
 
+/** `tag.class` plus `:nth-of-type(n)` when same-tag siblings exist and `nth` is on */
+function segmentNth(el: Element, classes: number, nth: boolean): string {
+  let seg = segment(el, classes);
+  if (nth) {
+    const same = [...(el.parentElement?.children ?? [])].filter((c) => c.tagName === el.tagName);
+    if (same.length > 1) seg += `:nth-of-type(${same.indexOf(el) + 1})`;
+  }
+  return seg;
+}
+
+/** A selector that matches this element and nothing else, as short and readable as it can be. */
 export function selectorFor(el: Element): string {
   if (el.id && !NOISY.test(el.id) && unique("#" + esc(el.id), el)) return "#" + esc(el.id);
   for (const a of STABLE_ATTRS) {
@@ -32,23 +43,22 @@ export function selectorFor(el: Element): string {
       if (unique(sel, el)) return sel;
     }
   }
-  // climb: try the element alone with 0, 1, 2 classes, then add parents until it is unique
   const chain: Element[] = [];
   for (let n: Element | null = el; n && n !== document.documentElement; n = n.parentElement) chain.push(n);
+  // shortest first: the element alone, then with parents; plain, then with positions among siblings
   for (let depth = 1; depth <= chain.length; depth++) {
-    for (const classes of [1, 2, 0]) {
-      const parts = chain.slice(0, depth).map((n, i) => segment(n, i === 0 ? classes : 1));
-      let sel = parts.reverse().join(" > ");
-      if (unique(sel, el)) return sel;
-      // same, with an nth-of-type on the element itself
-      const idx = [...(el.parentElement?.children ?? [])].filter((c) => c.tagName === el.tagName).indexOf(el) + 1;
-      if (idx > 0) {
-        const withNth = parts.slice();
-        withNth[withNth.length - 1] += `:nth-of-type(${idx})`;
-        sel = withNth.join(" > ");
+    for (const nth of [false, true]) {
+      for (const classes of [1, 2, 0]) {
+        const sel = chain.slice(0, depth).map((n, i) => segmentNth(n, i === 0 ? classes : 1, nth)).reverse().join(" > ");
         if (unique(sel, el)) return sel;
       }
     }
   }
-  return el.tagName.toLowerCase();
+  // cannot happen for an element in the document: a full positional path is unique by construction
+  return chain.map((n) => segmentNth(n, 0, true)).reverse().join(" > ");
+}
+
+/** How many elements on the page a selector matches (the tuner and the creature itself do not count). */
+export function countMatches(sel: string): number {
+  return q(sel).filter((e) => !e.closest("[data-perch-root],[data-perch-tuner]")).length;
 }
