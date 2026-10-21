@@ -14,7 +14,8 @@ const chrome = ["/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", 
 test("creature stands on real elements and stays out of trouble", { skip: !chrome || !existsSync(join(root, "dist/perch.js")) }, async () => {
   const server = createServer((req, res) => {
     if (req.url === "/favicon.ico") { res.statusCode = 204; return res.end(); }
-    const p = req.url === "/" ? "/demo/index.html" : req.url.split("?")[0];
+    let p = req.url === "/" ? "/test/fixtures/acme.html" : req.url.split("?")[0];
+    if (p === "/perch.js" || p === "/perch-tuner.js") p = "/dist" + p;
     try { res.setHeader("content-type", types[extname(p)] ?? "text/plain"); res.end(readFileSync(join(root, p))); } catch { res.statusCode = 404; res.end(); }
   }).listen(0);
   const port = server.address().port;
@@ -70,7 +71,8 @@ test("creature stands on real elements and stays out of trouble", { skip: !chrom
 test("tuner: swap creature, paint a pixel, pick an element, copy the command", { skip: !chrome || !existsSync(join(root, "dist/perch-tuner.js")) }, async () => {
   const server = createServer((req, res) => {
     if (req.url === "/favicon.ico") { res.statusCode = 204; return res.end(); }
-    const p = req.url === "/" ? "/demo/index.html" : req.url.split("?")[0];
+    let p = req.url === "/" ? "/test/fixtures/acme.html" : req.url.split("?")[0];
+    if (p === "/perch.js" || p === "/perch-tuner.js") p = "/dist" + p;
     try { res.setHeader("content-type", types[extname(p)] ?? "text/plain"); res.end(readFileSync(join(root, p))); } catch { res.statusCode = 404; res.end(); }
   }).listen(0);
   const browser = await chromium.launch({ executablePath: chrome });

@@ -51,6 +51,7 @@ test("creature copies a valid file and points the tag at it", async () => {
   assert.deepEqual(readOptions(detect(dir)), { creatureUrl: "/perch-creature.json" });
   await run(["--remove"], dir, quiet);
   assert.ok(!existsSync(join(dir, "perch-creature.json")) && !existsSync(join(dir, "perch.js")) && !existsSync(join(dir, "perch-tuner.js")));
+  await run([], dir, quiet); // install again, then try a broken creature
   writeFileSync(join(dir, "bad.json"), JSON.stringify({ name: "bad", body: [] }));
   await assert.rejects(run(["creature", "bad.json"], dir, quiet), /not a valid creature/);
 });
@@ -66,7 +67,13 @@ test("install copies the tuner unless --no-tuner", async () => {
 test("detect and options print JSON for agents", async () => {
   const dir = project(html);
   const before = JSON.parse((await capture(["detect"], dir)).text);
-  assert.deepEqual(before, { framework: "html", layoutFile: "index.html", publicDir: ".", installed: false, options: {} });
+  assert.equal(before.framework, "html");
+  assert.equal(before.layoutFile, "index.html");
+  assert.equal(before.publicDir, ".");
+  assert.equal(before.installed, false);
+  assert.deepEqual(before.options, {});
+  assert.equal(before.needsChoice, false);
+  assert.deepEqual(before.candidates.map((c) => [c.id, c.file, c.recommended, c.installed]), [[1, "index.html", true, false]]);
   await run(["--stickiness", "0.3"], dir, quiet);
   const after = JSON.parse((await capture(["detect"], dir)).text);
   assert.equal(after.installed, true);

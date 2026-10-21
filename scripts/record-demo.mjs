@@ -1,5 +1,5 @@
 // Records assets/demo.gif: the real demo page, the real script, driven by Playwright.
-//   bun run build && (python3 -m http.server 4173 &) && node scripts/record-demo.mjs
+//   bun run build && (bun run demo &) && node scripts/record-demo.mjs
 import { chromium } from "playwright-core";
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
@@ -32,7 +32,7 @@ await cdp.send("Page.startScreencast", { format: "jpeg", quality: 85, maxWidth: 
 const t = (s) => page.locator(`[data-perch-tuner] ${s}`);
 const move = async (x, y, steps = 25) => { await page.mouse.move(x, y, { steps }); };
 
-await page.goto("http://localhost:4173/demo/");
+await page.goto("http://localhost:4173/fixtures/acme.html");
 await page.waitForSelector("[data-perch-tuner]", { state: "attached" });
 await page.mouse.move(700, 300);
 await page.waitForTimeout(2400);

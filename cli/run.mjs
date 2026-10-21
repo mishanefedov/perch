@@ -1,8 +1,9 @@
 // `npx perch-pet`: detect the framework, copy perch.js into the public folder and add one
 // script tag to the right file. Plain code, no network, no model. Re-runs are safe, and
 // `--remove` undoes it. Everything it changes is printed.
-import { existsSync, readFileSync, writeFileSync, mkdirSync, copyFileSync, rmSync, readdirSync } from "node:fs";
-import { dirname, join, relative } from "node:path";
+import { existsSync, readFileSync, writeFileSync, mkdirSync, copyFileSync, rmSync, readdirSync, statSync } from "node:fs";
+import { basename, dirname, join, relative, resolve } from "node:path";
+import { createInterface } from "node:readline";
 import { fileURLToPath } from "node:url";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -14,14 +15,20 @@ const SRC = "/perch.js";
 
 const HELP = `perch-pet: add a pixel creature to your site
 
-  npx perch-pet [dir]                 install into the project in dir (default: current folder)
+  npx perch-pet [dir]                 find where it can go and install (asks if there is a choice)
+  npx perch-pet --file app/layout.tsx install into this exact file (repeat --file for several)
+  npx perch-pet detect                every place it found, as JSON (for scripts and agents)
   npx perch-pet set key=value ...     change options in the installed tag (npx perch-pet set stickiness=0.8)
   npx perch-pet set --reset           back to the defaults
   npx perch-pet creature file.json    use a creature drawn in the tuner (Download JSON)
-  npx perch-pet detect                what it found here, as JSON (for scripts and agents)
   npx perch-pet options               every option with type and default, as JSON Schema
   npx perch-pet --remove              undo the install
   npx perch-pet --dry                 show what would change, change nothing
+
+where it goes:
+  --file <path>     the layout or HTML file that has your <body> (repeatable)
+  --public <dir>    folder for perch.js (default: the framework's public folder)
+  --yes, -y         do not ask: use the recommended place
 
 install flags:   --no-tuner (do not copy the localhost tuner panel)
 options (also as flags on install): --creature octopus|blob|cat|ghost|robot|alien  --stickiness 0..1
@@ -55,7 +62,7 @@ export function checkOption(key, raw) {
 }
 
 export function parseArgs(argv) {
-  const o = { cmd: "install", dir: ".", attrs: {}, set: {}, file: null, dry: false, remove: false, help: false, reset: false, tuner: true };
+  const o = { cmd: "install", dir: ".", attrs: {}, set: {}, creatureFile: null, files: [], public: null, yes: false, dry: false, remove: false, help: false, reset: false, tuner: true };
   const rest = [...argv];
   if (["set", "creature", "detect", "options"].includes(rest[0])) o.cmd = rest.shift();
   for (let i = 0; i < rest.length; i++) {
@@ -64,6 +71,12 @@ export function parseArgs(argv) {
     else if (a === "--remove") o.remove = true;
     else if (a === "--reset") o.reset = true;
     else if (a === "--no-tuner") o.tuner = false;
+    else if (a === "--yes" || a === "-y") o.yes = true;
+    else if (a === "--file" || a === "--public") {
+      const v = rest[++i];
+      if (v === undefined) throw new Error(`${a} needs a value`);
+      if (a === "--file") o.files.push(v); else o.public = v;
+    }
     else if (a === "-h" || a === "--help") o.help = true;
     else if (FLAG_FALSE[a]) o.attrs["data-" + kebab(FLAG_FALSE[a])] = "false";
     else if (a.startsWith("--") && FLAG_VALUES[a.slice(2)]) {
@@ -76,7 +89,7 @@ export function parseArgs(argv) {
       const at = a.indexOf("=");
       const key = a.slice(0, at);
       o.set[key] = checkOption(key, a.slice(at + 1));
-    } else if (o.cmd === "creature" && !o.file) o.file = a;
+    } else if (o.cmd === "creature" && !o.creatureFile) o.creatureFile = a;
     else if (o.cmd === "set") throw new Error(`expected key=value, got "${a}"`);
     else o.dir = a;
   }
@@ -94,48 +107,114 @@ function first(root, paths) {
   return paths.map((p) => join(root, p)).find((p) => existsSync(p)) ?? null;
 }
 
+const SKIP = new Set(["node_modules", ".next", ".git", "dist", "build", "out", ".turbo", ".vercel", ".svelte-kit", ".nuxt", ".output", "coverage"]);
 function walk(dir, depth = 3, out = []) {
   if (depth < 0 || !existsSync(dir)) return out;
   for (const e of readdirSync(dir, { withFileTypes: true })) {
-    if (e.name === "node_modules" || e.name.startsWith(".")) continue;
+    if (SKIP.has(e.name) || e.name.startsWith(".")) continue;
     const p = join(dir, e.name);
     if (e.isDirectory()) walk(p, depth - 1, out);
     else out.push(p);
   }
   return out;
 }
+const read = (p) => { try { return readFileSync(p, "utf8"); } catch { return ""; } };
+const hasBody = (p) => /<\/body>/i.test(read(p));
+const LAYOUT_RE = /(^|[\\/])layout\.(tsx|jsx|js|ts)$/;
+const LABELS = {
+  "next-app": "Next.js layout",
+  "next-pages": "Next.js pages router (_document)",
+  "next-pages-new": "Next.js pages router (creates _document)",
+  nuxt: "Nuxt plugin (creates it)",
+  html: "HTML page",
+};
 
-/** Works out what kind of project this is and which file gets the tag. */
-export function detect(root) {
-  const pkg = readJson(join(root, "package.json")) ?? {};
-  const deps = { ...pkg.dependencies, ...pkg.devDependencies };
-  const ts = existsSync(join(root, "tsconfig.json"));
+/** Every place in one project folder where the tag could go, best first. */
+function projectCandidates(dir) {
+  const pkg = readJson(join(dir, "package.json"));
+  const deps = { ...pkg?.dependencies, ...pkg?.devDependencies };
+  const ts = existsSync(join(dir, "tsconfig.json"));
+  const vite = !!deps.vite || existsSync(join(dir, "vite.config.ts")) || existsSync(join(dir, "vite.config.js"));
+  const out = [];
+  const add = (c) => out.push({ project: dir, ...c });
 
   if (deps.next) {
-    const app = first(root, ["app/layout.tsx", "app/layout.jsx", "app/layout.js", "app/layout.ts", "src/app/layout.tsx", "src/app/layout.jsx", "src/app/layout.js", "src/app/layout.ts"]);
-    if (app) return { kind: "next-app", file: app, publicDir: join(root, "public") };
-    const doc = first(root, ["pages/_document.tsx", "pages/_document.jsx", "pages/_document.js", "src/pages/_document.tsx", "src/pages/_document.jsx", "src/pages/_document.js"]);
-    const pagesDir = existsSync(join(root, "src/pages")) ? "src/pages" : "pages";
-    if (doc) return { kind: "next-pages", file: doc, publicDir: join(root, "public") };
-    if (existsSync(join(root, pagesDir))) return { kind: "next-pages-new", file: join(root, pagesDir, ts ? "_document.tsx" : "_document.js"), publicDir: join(root, "public"), ts };
+    for (const base of ["app", "src/app"]) {
+      const appDir = join(dir, base);
+      // a root layout is the one that renders <html> and <body>. Route groups can each have their own.
+      for (const f of walk(appDir, 6).filter((f) => LAYOUT_RE.test(f) && hasBody(f))) {
+        const top = dirname(f) === appDir;
+        add({ kind: "next-app", file: f, publicDir: join(dir, "public"), score: top ? 100 : 85, label: top ? "Next.js root layout" : "Next.js layout (route group)" });
+      }
+    }
+    const doc = first(dir, ["pages/_document.tsx", "pages/_document.jsx", "pages/_document.js", "src/pages/_document.tsx", "src/pages/_document.jsx", "src/pages/_document.js"]);
+    const pagesBase = ["pages", "src/pages"].find((b) => existsSync(join(dir, b)));
+    if (doc) add({ kind: "next-pages", file: doc, publicDir: join(dir, "public"), score: 90, label: LABELS["next-pages"] });
+    else if (pagesBase && !out.length) add({ kind: "next-pages-new", file: join(dir, pagesBase, ts ? "_document.tsx" : "_document.js"), publicDir: join(dir, "public"), score: 50, label: LABELS["next-pages-new"] });
   }
   if (deps.astro) {
-    const layouts = walk(join(root, "src"), 3).filter((f) => f.endsWith(".astro") && /<\/body>/.test(readFileSync(f, "utf8")));
-    const file = layouts.find((f) => /layouts?[\\/]/i.test(f)) ?? layouts[0];
-    if (file) return { kind: "html", file, publicDir: join(root, "public"), inline: "is:inline " };
+    for (const f of walk(join(dir, "src"), 4).filter((f) => f.endsWith(".astro") && hasBody(f))) {
+      const layout = /layouts?[\\/]/i.test(f);
+      add({ kind: "html", file: f, publicDir: join(dir, "public"), inline: "is:inline ", score: layout ? 90 : 60, label: layout ? "Astro layout" : "Astro page" });
+    }
   }
-  if (deps["@sveltejs/kit"] && existsSync(join(root, "src/app.html"))) return { kind: "html", file: join(root, "src/app.html"), publicDir: join(root, "static") };
+  if (deps["@sveltejs/kit"] && existsSync(join(dir, "src/app.html"))) add({ kind: "html", file: join(dir, "src/app.html"), publicDir: join(dir, "static"), score: 100, label: "SvelteKit app.html" });
   if (deps.nuxt) {
-    const dir = existsSync(join(root, "app")) && !existsSync(join(root, "plugins")) ? "app/plugins" : "plugins";
-    return { kind: "nuxt", file: join(root, dir, "perch.client.ts"), publicDir: join(root, "public") };
+    const sub = existsSync(join(dir, "app")) && !existsSync(join(dir, "plugins")) ? "app/plugins" : "plugins";
+    add({ kind: "nuxt", file: join(dir, sub, "perch.client.ts"), publicDir: join(dir, "public"), score: 100, label: LABELS.nuxt });
   }
-  const html = first(root, ["index.html", "public/index.html", "src/index.html"]);
-  if (html) {
-    const vite = existsSync(join(root, "vite.config.ts")) || existsSync(join(root, "vite.config.js"));
-    const publicDir = html.endsWith(join("public", "index.html")) || vite ? join(root, "public") : dirname(html);
-    return { kind: "html", file: html, publicDir };
+  if (!["next", "astro", "@sveltejs/kit", "nuxt"].some((d) => deps[d])) {
+    const pages = [...new Set([...["index.html", "public/index.html", "src/index.html"].map((p) => join(dir, p)), ...walk(dir, 2).filter((f) => f.endsWith(".html"))])].filter((f) => existsSync(f) && hasBody(f));
+    for (const f of pages) {
+      const inPublic = f.startsWith(join(dir, "public") + "/");
+      const score = f === join(dir, "index.html") ? 80 : f === join(dir, "public/index.html") ? 75 : f === join(dir, "src/index.html") ? 70 : 50;
+      add({ kind: "html", file: f, publicDir: vite || inPublic ? join(dir, "public") : dirname(f), score, label: vite ? "Vite / HTML page" : "HTML page" });
+    }
   }
+  return out;
+}
+
+/** All candidate places under `root`, best first, with ids. Looks in `root` itself, and if it is not a
+ *  project, in folders below it (monorepos, a site/ or web/ folder). */
+export function findCandidates(root) {
+  let list = projectCandidates(root);
+  if (!list.length) {
+    const dirs = [...new Set(walk(root, 3).filter((f) => basename(f) === "package.json").map(dirname))].filter((d) => d !== root);
+    list = dirs.flatMap(projectCandidates);
+  }
+  list.sort((a, b) => b.score - a.score || a.file.localeCompare(b.file));
+  return list.map((c, i) => ({ ...c, id: i + 1, recommended: i === 0 }));
+}
+
+/** The one obvious choice, or null when a person (or --file) has to decide. */
+export function autoPick(list) {
+  if (list.length === 1) return list[0];
+  if (new Set(list.map((c) => c.project)).size > 1) return null; // several projects (a monorepo): a person decides
+  if (list.length > 1 && list[0].score >= 100 && list[1].score < 100) return list[0]; // one real root layout beats nested ones
   return null;
+}
+
+/** Same as before: the framework's one obvious file, or null. */
+export function detect(root) {
+  return autoPick(findCandidates(root));
+}
+
+/** Builds a candidate from a file the user named. */
+export function candidateFromFile(file, publicOverride = null) {
+  if (!existsSync(file) || !statSync(file).isFile()) throw new Error(`file not found: ${file}`);
+  let project = dirname(file);
+  for (let d = dirname(file); d !== dirname(d); d = dirname(d)) if (existsSync(join(d, "package.json"))) { project = d; break; }
+  const deps = { ...readJson(join(project, "package.json"))?.dependencies, ...readJson(join(project, "package.json"))?.devDependencies };
+  const name = basename(file);
+  const vite = !!deps.vite || existsSync(join(project, "vite.config.ts")) || existsSync(join(project, "vite.config.js"));
+  let c;
+  if (deps.next && LAYOUT_RE.test(file)) c = { kind: "next-app", publicDir: join(project, "public") };
+  else if (deps.next && /^_document\./.test(name)) c = { kind: "next-pages", publicDir: join(project, "public") };
+  else if (deps.astro && name.endsWith(".astro")) c = { kind: "html", inline: "is:inline ", publicDir: join(project, "public") };
+  else if (deps["@sveltejs/kit"] && name === "app.html") c = { kind: "html", publicDir: join(project, "static") };
+  else c = { kind: "html", publicDir: vite || file.startsWith(join(project, "public") + "/") ? join(project, "public") : dirname(file) };
+  if (c.kind !== "next-pages" && !hasBody(file)) throw new Error(`no </body> found in ${file}. Pick the file that renders your <body> tag (a root layout or an HTML page).`);
+  return { project, file, score: 0, label: LABELS[c.kind], ...c, publicDir: publicOverride ?? c.publicDir };
 }
 
 /** Puts `line` on its own line just before the first `closing` tag, indented one level deeper. */
@@ -259,89 +338,180 @@ export function writeOptions(found, changes, reset = false) {
   return next;
 }
 
-export async function run(argv, cwd, out = console.log) {
+function defaultIo() {
+  return {
+    isTTY: !!(process.stdin.isTTY && process.stdout.isTTY),
+    ask(question) {
+      const rl = createInterface({ input: process.stdin, output: process.stdout });
+      return new Promise((res) => rl.question(question, (a) => { rl.close(); res(a); }));
+    },
+  };
+}
+
+const unquote = (s) => s.trim().replace(/^(['"])(.*)\1$/, "$2").replace(/\\ /g, " ");
+
+/** Asks which place(s) to use. Accepts numbers ("2" or "1,2"), a file path, a folder path, or Enter for the first. */
+async function askWhere(list, { cwd, out, io, publicDir }) {
+  const show = (items) => {
+    out(`\nFound ${items.length} places to add the creature:\n`);
+    for (const c of items) out(`  ${c.id}) ${c.label.padEnd(34)} ${relative(cwd, c.file) || c.file}${c.recommended ? "   (recommended)" : ""}`);
+    out("");
+  };
+  let items = list;
+  show(items);
+  for (let tries = 0; tries < 4; tries++) {
+    const ans = unquote(await io.ask("Pick a number (several: 1,2), paste a file or folder path, or press Enter for 1: "));
+    if (ans === "") return [items[0]];
+    if (/^\d+(\s*,\s*\d+)*$/.test(ans)) {
+      const ids = ans.split(",").map((n) => Number(n.trim()));
+      const picked = ids.map((id) => items.find((c) => c.id === id));
+      if (picked.every(Boolean)) return picked;
+      out(`Choose numbers between 1 and ${items.length}.`);
+      continue;
+    }
+    const p = resolve(cwd, ans);
+    try {
+      if (existsSync(p) && statSync(p).isDirectory()) {
+        const found = findCandidates(p);
+        if (!found.length) { out(`No supported project found in ${p}. Paste a file instead.`); continue; }
+        const pick = autoPick(found);
+        if (pick) return [pick];
+        items = found; show(items);
+        continue;
+      }
+      return [candidateFromFile(p, publicDir)];
+    } catch (e) {
+      out(e instanceof Error ? e.message : String(e));
+    }
+  }
+  throw new Error("no valid choice. Run again with --file <path>.");
+}
+
+export async function run(argv, cwd, out = console.log, io = defaultIo()) {
   const o = parseArgs(argv);
   if (o.help) { out(HELP); return 0; }
   if (o.cmd === "options") { out(JSON.stringify(SCHEMA, null, 2)); return 0; }
-  const root = join(cwd, o.dir);
+  const root = resolve(cwd, o.dir);
   if (!existsSync(root)) throw new Error(`folder not found: ${root}`);
-  const found = detect(root);
   const rel = (p) => relative(root, p) || ".";
+  const here = (p) => relative(cwd, p) || ".";
+  const publicOverride = o.public ? resolve(cwd, o.public) : null;
+  const withPublic = (list) => (publicOverride ? list.map((c) => ({ ...c, publicDir: publicOverride })) : list);
   const manual = `Add this line before </body> yourself:\n  <script src="${SRC}" defer${attrString(o.attrs)}></script>\n(after copying node_modules/perch-pet/dist/perch.js to your public folder as perch.js)`;
+  const explicit = o.files.map((f) => candidateFromFile(resolve(cwd, f), publicOverride));
+  const list = explicit.length ? explicit.map((c, i) => ({ ...c, id: i + 1, recommended: i === 0 })) : withPublic(findCandidates(root));
+  const installed = list.filter((c) => readOptions(c) !== null);
 
   if (o.cmd === "detect") {
-    const opts = found ? readOptions(found) : null;
+    const pick = installed[0] ?? autoPick(list);
+    const opts = installed[0] ? readOptions(installed[0]) : null;
     out(JSON.stringify({
-      framework: found?.kind ?? null,
-      layoutFile: found ? rel(found.file) : null,
-      publicDir: found ? rel(found.publicDir) : null,
-      installed: opts !== null,
+      framework: pick?.kind ?? null,
+      layoutFile: pick ? rel(pick.file) : null,
+      publicDir: pick ? rel(pick.publicDir) : null,
+      installed: installed.length > 0,
       options: opts ?? {},
+      needsChoice: !pick && list.length > 1,
+      candidates: list.map((c) => ({ id: c.id, kind: c.kind, label: c.label, file: rel(c.file), publicDir: rel(c.publicDir), project: rel(c.project), recommended: c.recommended, installed: installed.includes(c) })),
     }, null, 2));
-    return found ? 0 : 1;
+    return list.length ? 0 : 1;
   }
 
-  if (!found) {
-    out("Could not detect a supported project (Next.js, Astro, SvelteKit, Nuxt, Vite or plain HTML) here.\n" + manual);
+  if (!list.length) {
+    out("Could not find a place to add it. Looked for Next.js, Astro, SvelteKit, Nuxt, Vite and plain HTML in " + root + ".\nIf your layout is somewhere else, pass it: npx perch-pet --file path/to/layout-or-page\n\n" + manual);
     return 1;
   }
 
-  if (o.cmd === "set") {
-    const changes = { ...o.set };
-    if (!o.reset && !Object.keys(changes).length) throw new Error("nothing to set. Example: npx perch-pet set stickiness=0.8 creature=cat");
-    if (o.dry) { out(`Would set: ${JSON.stringify(changes)}${o.reset ? " (after reset)" : ""} in ${rel(found.file)}`); return 0; }
-    const next = writeOptions(found, changes, o.reset);
-    out(`Updated ${rel(found.file)}. Options now: ${Object.keys(next).length ? JSON.stringify(next) : "defaults"}`);
-    return 0;
-  }
+  // commands that work on what is already installed
+  if (o.cmd === "set" || o.cmd === "creature" || o.remove) {
+    const targets = installed.length || o.cmd !== "install" ? installed : [];
+    if (!targets.length && !o.remove) throw new Error("perch-pet is not installed here. Run `npx perch-pet` first (or pass --file to say where).");
+    const dirs = [...new Set((targets.length ? targets : [autoPick(list)].filter(Boolean)).map((c) => c.publicDir))];
+    const files = (dir) => ["perch.js", "perch-tuner.js", "perch-creature.json"].map((f) => join(dir, f));
 
-  if (o.cmd === "creature") {
-    if (!o.file) throw new Error("usage: npx perch-pet creature ./creature.json");
-    const src = join(cwd, o.file);
+    if (o.remove) {
+      if (!targets.length && !dirs.length) { out("Nothing to remove: perch-pet is not installed here."); return 0; }
+      for (const c of targets) {
+        const r = removal(c);
+        if (!o.dry && r) { if (r.delete) rmSync(r.path); else writeFileSync(r.path, r.after); }
+        out(`${o.dry ? "Would remove" : "Removed"} the tag in ${rel(c.file)}`);
+      }
+      for (const d of dirs) {
+        if (!o.dry) for (const f of files(d)) if (existsSync(f)) rmSync(f);
+        out(`${o.dry ? "Would remove" : "Removed"}: ${files(d).map(rel).join(", ")}`);
+      }
+      return 0;
+    }
+
+    if (o.cmd === "set") {
+      const changes = { ...o.set };
+      if (!o.reset && !Object.keys(changes).length) throw new Error("nothing to set. Example: npx perch-pet set stickiness=0.8 creature=cat");
+      for (const c of targets) {
+        if (o.dry) { out(`Would set: ${JSON.stringify(changes)}${o.reset ? " (after reset)" : ""} in ${rel(c.file)}`); continue; }
+        const next = writeOptions(c, changes, o.reset);
+        out(`Updated ${rel(c.file)}. Options now: ${Object.keys(next).length ? JSON.stringify(next) : "defaults"}`);
+      }
+      return 0;
+    }
+
+    // creature
+    if (!o.creatureFile) throw new Error("usage: npx perch-pet creature ./creature.json");
+    const src = resolve(cwd, o.creatureFile);
     if (!existsSync(src)) throw new Error(`file not found: ${src}`);
     let spec;
-    try { spec = JSON.parse(readFileSync(src, "utf8")); } catch (e) { throw new Error(`${o.file} is not valid JSON`); }
+    try { spec = JSON.parse(readFileSync(src, "utf8")); } catch { throw new Error(`${o.creatureFile} is not valid JSON`); }
     if (!existsSync(join(DIST, "esm", "index.js"))) throw new Error("dist/ is missing. Run `bun run build` first.");
     const { validate } = await import(join(DIST, "esm", "index.js"));
     const problems = validate(spec);
-    if (problems.length) throw new Error(`${o.file} is not a valid creature:\n- ` + problems.join("\n- "));
-    const dest = join(found.publicDir, "perch-creature.json");
-    if (o.dry) { out(`Would copy ${o.file} to ${rel(dest)} and set creatureUrl`); return 0; }
-    mkdirSync(found.publicDir, { recursive: true });
-    writeFileSync(dest, JSON.stringify(spec, null, 2) + "\n");
-    writeOptions(found, { creatureUrl: "/perch-creature.json", creature: null });
-    out(`Copied creature "${spec.name}" to ${rel(dest)} and pointed the tag at it.`);
+    if (problems.length) throw new Error(`${o.creatureFile} is not a valid creature:\n- ` + problems.join("\n- "));
+    for (const d of dirs) {
+      const dest = join(d, "perch-creature.json");
+      if (o.dry) { out(`Would copy ${o.creatureFile} to ${rel(dest)}`); continue; }
+      mkdirSync(d, { recursive: true });
+      writeFileSync(dest, JSON.stringify(spec, null, 2) + "\n");
+      out(`Copied creature "${spec.name}" to ${rel(dest)}`);
+    }
+    if (!o.dry) for (const c of targets) writeOptions(c, { creatureUrl: "/perch-creature.json", creature: null });
+    if (!o.dry) out("Pointed the tag at it.");
     return 0;
   }
 
-  out(`Detected: ${found.kind.replace(/-/g, " ")}`);
-  const files = ["perch.js", "perch-tuner.js", "perch-creature.json"].map((f) => join(found.publicDir, f));
-
-  if (o.remove) {
-    const r = removal(found);
-    if (!o.dry) {
-      if (r?.delete) rmSync(r.path);
-      else if (r) writeFileSync(r.path, r.after);
-      for (const f of files) if (existsSync(f)) rmSync(f);
+  // ---- install: decide where ----
+  let targets = explicit.length ? list : autoPick(list) ? [autoPick(list)] : null;
+  if (!targets) {
+    if (o.yes) targets = [list[0]];
+    else if (io.isTTY) targets = await askWhere(list, { cwd, out, io, publicDir: publicOverride });
+    else {
+      out(`Found ${list.length} possible places and cannot tell which one is yours. Pick one (or several) and run again:\n`);
+      for (const c of list) out(`  npx perch-pet --file ${JSON.stringify(here(c.file))}   # ${c.label}${c.recommended ? " (recommended)" : ""}`);
+      out("\nOr add --yes to use the first one. `npx perch-pet detect` prints this list as JSON.");
+      return 2;
     }
-    out(`${o.dry ? "Would remove" : "Removed"}: ${files.map(rel).join(", ")}${r ? `, tag in ${rel(r.path)}` : ""}`);
-    return 0;
+  } else if (!explicit.length && list.length > 1) {
+    out(`Using the ${targets[0].label.toLowerCase()} (${here(targets[0].file)}) of ${list.length} places found.`);
   }
 
   if (!existsSync(BUNDLE)) throw new Error("dist/perch.js is missing. Run `bun run build` first.");
-  const p = plan(found, o.attrs);
-  if (!o.dry) {
-    mkdirSync(found.publicDir, { recursive: true });
-    copyFileSync(BUNDLE, files[0]);
-    if (o.tuner && existsSync(TUNER)) copyFileSync(TUNER, files[1]);
-    if (!p.already) {
-      mkdirSync(dirname(p.path), { recursive: true });
-      writeFileSync(p.path, p.after);
+  const copied = new Set();
+  for (const found of targets) {
+    out(`${found.label}: ${here(found.file)}`);
+    const p = plan(found, o.attrs);
+    if (!o.dry) {
+      if (!copied.has(found.publicDir)) {
+        mkdirSync(found.publicDir, { recursive: true });
+        copyFileSync(BUNDLE, join(found.publicDir, "perch.js"));
+        if (o.tuner && existsSync(TUNER)) copyFileSync(TUNER, join(found.publicDir, "perch-tuner.js"));
+        copied.add(found.publicDir);
+      }
+      if (!p.already) {
+        mkdirSync(dirname(p.path), { recursive: true });
+        writeFileSync(p.path, p.after);
+      }
     }
+    out(`  ${o.dry ? "Would copy" : "Copied"}: ${rel(join(found.publicDir, "perch.js"))}${o.tuner ? ` and perch-tuner.js (the localhost tuner)` : ""}`);
+    out(`  ${p.already ? "Already installed (script refreshed)" : `${o.dry ? "Would edit" : p.created ? "Created" : "Edited"}: ${rel(p.path)}`}`);
+    if (o.dry && !p.already) out("\n" + p.after.split("\n").filter((l) => l.includes("perch")).join("\n"));
   }
-  out(`${o.dry ? "Would copy" : "Copied"}: ${rel(files[0])}${o.tuner ? ` and ${rel(files[1])} (the localhost tuner)` : ""}`);
-  out(p.already ? `Already installed in ${rel(p.path)} (script refreshed)` : `${o.dry ? "Would edit" : p.created ? "Created" : "Edited"}: ${rel(p.path)}`);
-  if (o.dry && !p.already) out("\n" + p.after.split("\n").filter((l) => l.includes("perch")).join("\n"));
   if (!o.dry) out("\nDone. Run your dev server: a gear button appears bottom-left on localhost to tune it. To undo: npx perch-pet --remove");
   return 0;
 }

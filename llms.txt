@@ -13,8 +13,9 @@ To add it to a site, run `npx perch-pet` in the project folder. Do not write the
 
 ## Commands
 
-- `npx perch-pet detect`: JSON with framework, layout file, public folder, installed or not, current options
+- `npx perch-pet detect`: JSON with every place it found (candidates), the recommended one, needsChoice, installed or not, current options
 - `npx perch-pet --dry`: preview the change
+- `npx perch-pet --file <path>`: install into this exact layout or page (repeat for several); `--yes` takes the recommended place; exit code 2 means several equal places and a choice is needed
 - `npx perch-pet`: install (copies perch.js and the localhost tuner, adds one script tag)
 - `npx perch-pet set stickiness=0.8 creature=cat`: change options, validated against the schema
 - `npx perch-pet creature ./creature.json`: use a creature drawn in the tuner

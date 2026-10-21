@@ -1,6 +1,6 @@
 {
   "name": "perch-pet",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A pixel creature that lives on your website, stands on your real elements and points at your call to action. One script tag, tuned live on localhost. Octopus, cat, robot, ghost, alien, blob, or draw your own.",
   "keywords": [
     "mascot",
@@ -52,7 +52,8 @@
     "assets": "bun run scripts/make-assets.ts",
     "prepublishOnly": "bun run build && bun run typecheck && bun run test",
     "test": "node --test \"test/*.test.mjs\"",
-    "demo": "bun run build && python3 -m http.server 4173"
+    "site:build": "bun run scripts/build-site.ts",
+    "demo": "node scripts/demo.mjs"
   },
   "devDependencies": {
     "playwright-core": "^1.49.0",

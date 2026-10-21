@@ -26,7 +26,20 @@ Run one command in your project folder:
 npx perch-pet
 ```
 
-It detects your framework, copies `perch.js` into your public folder and adds one `<script>` tag to your layout. It prints every change. Undo with `npx perch-pet --remove`. Preview first with `--dry`.
+It looks for every place the tag can go (all root layouts, any depth, so Next.js route groups work too), copies `perch.js` into your public folder and adds one `<script>` tag. It prints every change. Undo with `npx perch-pet --remove`. Preview first with `--dry`.
+
+If there is more than one place, it asks. Pick a number, several (`1,2`), or paste a file or folder path:
+
+```
+Found 2 places to add the creature:
+
+  1) Next.js layout (route group)       app/(marketing)/layout.tsx   (recommended)
+  2) Next.js layout (route group)       app/(app)/layout.tsx
+
+Pick a number (several: 1,2), paste a file or folder path, or press Enter for 1:
+```
+
+You can also skip the question: `npx perch-pet --file app/layout.tsx`.
 
 Start your dev server. A gear button appears at the bottom left: that is the [tuner](#tune-it-on-localhost).
 
@@ -49,13 +62,17 @@ That is the whole setup. The defaults work on most sites.
 Do not write this by hand and do not add a skill file. Run the command. It is deterministic: no network, no model, plain file edits.
 
 ```bash
-npx perch-pet detect          # JSON: framework, layout file, public folder, installed?, current options
+npx perch-pet detect          # JSON: every place it found, which is recommended, what is installed
 npx perch-pet --dry           # preview the exact change
-npx perch-pet                 # install
+npx perch-pet                 # install (one clear place is used; several: see below)
+npx perch-pet --file app/layout.tsx   # install into this file. Repeat --file for several
+npx perch-pet --yes           # several places and nobody to ask: use the recommended one
 npx perch-pet set stickiness=0.8 creature=cat   # change options (validated against schema.json)
 npx perch-pet options         # every option, type, limit and default as JSON Schema
 npx perch-pet --remove        # undo
 ```
+
+Exit codes: `0` done. `1` nothing found (the message says how to use `--file`). `2` several equal places and no terminal to ask in: the output lists a ready-to-run command for each. Pick one or add `--yes`.
 
 Prompt to give an agent: `Add perch-pet to this site: run npx perch-pet detect, then npx perch-pet, then open the dev server and check that the creature stands on the page elements.`
 
@@ -127,14 +144,14 @@ No AI, no config file. It reads the page in the visitor's browser.
 
 | Framework | File it edits | Public folder |
 |---|---|---|
-| Next.js, app router | `app/layout.*` (adds `<Script>`) | `public/` |
+| Next.js, app router | every root layout, e.g. `app/layout.*` or `app/(site)/layout.*` (adds `<Script>`) | `public/` |
 | Next.js, pages router | `pages/_document.*` (creates it if missing) | `public/` |
 | Astro | the layout with `</body>` | `public/` |
 | SvelteKit | `src/app.html` | `static/` |
 | Nuxt 3 | adds `plugins/perch.client.ts` | `public/` |
 | Vite, plain HTML | `index.html` | `public/` or next to it |
 
-Anything else (Remix, Gatsby, Docusaurus, WordPress, Webflow, Shopify): copy `perch.js` to your static folder and paste the one script tag.
+Anything else (Remix, Gatsby, Docusaurus, WordPress, Webflow, Shopify): use the CDN tag `<script src="https://unpkg.com/perch-pet@0.1/dist/perch.js" defer></script>`, or copy `perch.js` to your static folder. If your layout is somewhere unusual, point at it: `npx perch-pet --file path/to/file`.
 
 ## Use it from JavaScript
 

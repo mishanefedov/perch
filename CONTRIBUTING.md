@@ -9,7 +9,7 @@ bun install
 bun run build      # dist/
 bun run typecheck
 bun run test       # needs Chrome for the browser tests; they skip themselves if it is missing
-bun run demo       # http://localhost:4173/demo/  (the gear button is the tuner)
+bun run demo       # builds and opens the landing page, which is the demo: http://localhost:4173/ (gear button = tuner)
 ```
 
 ## Layout
@@ -18,7 +18,9 @@ bun run demo       # http://localhost:4173/demo/  (the gear button is the tuner)
 - `src/creature.ts` and `src/creatures/*.ts`: the sprite format and the built-in creatures.
 - `src/tuner.ts`, `src/editor.ts`, `src/selector.ts`: the localhost panel. Loaded only in development.
 - `cli/run.mjs`: the `perch-pet` command. `schema.json` is the source of truth for option names, types and limits.
-- `scripts/`: build, README assets (`bun run assets`), demo GIF.
+- `site/` and `scripts/build-site.ts`: the landing page and guides (plain HTML, no framework). `bun run site:build` writes `site-dist/`. The site runs Perch itself.
+- `test/fixtures/acme.html`: the page the browser tests and the README screenshots use.
+- `scripts/`: build, site, README assets (`bun run assets`), demo GIF.
 
 ## Add a creature
 
