@@ -5,6 +5,8 @@
   "npm": "https://www.npmjs.com/package/perch-pet",
   "extension": {
     "chromeStoreUrl": "",
-    "zip": "/perch-extension.zip"
+    "zip": "/perch-extension.zip",
+    "status": "review",
+    "chromeStoreId": ""
   }
 }

@@ -299,7 +299,7 @@ Machine-readable: [`llms.txt`](llms.txt), [`llms-full.txt`](llms-full.txt), [`sc
 
 | | |
 |---|---|
-| Size | `perch.js` 27 kB, 13 kB gzipped, with all six creatures. `perch-tuner.js` 31 kB, 11 kB gzipped, development only |
+| Size | `perch.js` 34 kB, 13 kB gzipped, with all six creatures. `perch-tuner.js` 31 kB, 11 kB gzipped, development only |
 | Requests | None. The one exception is a fetch of your own `creatureUrl` file, if you set it |
 | Tracking | None. No cookies. It writes to browser storage only for `?perch=tune` (`sessionStorage`), for "already seen" flags of a question you set (`sessionStorage` or `localStorage`), and, in the tuner on localhost, your unsaved creature edits (`localStorage`) |
 | CPU | One canvas, redrawn only when the pose changes. About 60 updates per second at most. Stops in background tabs |

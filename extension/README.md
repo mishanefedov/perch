@@ -80,7 +80,9 @@ No account or login is needed. After installing, open any normal web page (for e
 
 **6. Distribution.** Visibility: Public. Regions: all. Submit for review. Reviews can take hours to several days, and broad host permissions slow them down, which is why the default is `activeTab`.
 
-**7. When it is approved (about two minutes of work).** Copy the listing URL into `site/config.json` under `extension.chromeStoreUrl`, then `vercel deploy --prod`. Until that URL is set, the site does not promote the extension at all (no home page section, no nav link, no speech bubble; the `/extension/` page says it is coming and is not indexed). Once it is set, all of that appears, with "Add to Chrome" linking to the store. Add the store badge to the README.
+**7. While it is in review.** `site/config.json` has `extension.status: "review"`. The site then says "Chrome Web Store: in review" on the home page and on `/extension/`, with a one-minute install from the zip right there. The creature's question ("Want me on every website?") scrolls to that section. Nothing links to the store listing, because it does not work before approval.
+
+**8. When it is approved (about two minutes of work).** In `site/config.json` set `extension.chromeStoreId` to the item ID (the 32 letters in the dashboard address, `.../devconsole/<publisher>/<item-id>/edit`) and `extension.status` to `"live"`, then `vercel deploy --prod`. Or set `extension.chromeStoreUrl` to the listing URL. Every button becomes "Add to Chrome" and links to the store (`https://chromewebstore.google.com/detail/<item-id>`), the creature's question opens it in a new tab, and the zip moves under "Install from source". The store page cannot be checked automatically: it returns HTTP 200 even for IDs that do not exist.
 
 **Also publish to Microsoft Edge Add-ons.** The same zip works unchanged. The dev account at https://partner.microsoft.com/dashboard/microsoftedge is free. It gives Edge users a one-click link too.
 
