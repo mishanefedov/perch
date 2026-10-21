@@ -21,6 +21,9 @@ for (const f of ["perch.js", "perch-tuner.js"]) cpSync(join("dist", f), join(OUT
 mkdirSync(join(OUT, "assets"), { recursive: true });
 for (const f of ["hero.svg", "creatures.svg", "tuner.png", "editor.png", "demo.gif"]) cpSync(join("assets", f), join(OUT, "assets", f));
 for (const f of ["schema.json", "llms-full.txt", "AGENTS.md"]) cpSync(f, join(OUT, f));
+mkdirSync(join(OUT, "fonts"), { recursive: true });
+cpSync("node_modules/@fontsource-variable/bricolage-grotesque/files/bricolage-grotesque-latin-wght-normal.woff2", join(OUT, "fonts/display.woff2"));
+cpSync("node_modules/@fontsource-variable/atkinson-hyperlegible-next/files/atkinson-hyperlegible-next-latin-wght-normal.woff2", join(OUT, "fonts/text.woff2"));
 // the browser extension: the zip people can download while it is not (yet) in the Chrome Web Store, and its screenshots
 if (existsSync("extension-dist/perch-extension.zip")) cpSync("extension-dist/perch-extension.zip", join(OUT, "perch-extension.zip"));
 else console.warn("extension-dist/perch-extension.zip is missing: run `bun run extension:build` first");
@@ -44,7 +47,7 @@ const STORE = process.env.EXTENSION_STORE_URL ?? (cfg.extension.chromeStoreUrl |
 const LIVE = !!STORE;
 
 // the creature on this site asks about the extension (it uses the Ask feature of the library); the button opens the store listing, or the install steps until there is one
-const ASK = { text: "Want me on every website?", buttons: [{ label: "Get the extension", action: "link", value: STORE || "/#extension", ...(STORE ? { newTab: true } : {}) }], delay: 7 };
+const ASK = { text: "Want me on every website?", buttons: [{ label: "Get the extension", action: "link", value: STORE || "/extension/", ...(STORE ? { newTab: true } : {}) }], delay: 7 };
 const SOURCE_STEPS = `<ol class="mini">
 <li><a href="${cfg.extension.zip}" download>Download perch-extension.zip</a> and unzip it.</li>
 <li>Open <code>chrome://extensions</code> and switch on <strong>Developer mode</strong> (top right).</li>
@@ -53,7 +56,7 @@ const SOURCE_STEPS = `<ol class="mini">
 /** One place that says what is going on. In review: the status and a one-minute install. Live: Add to Chrome. */
 const installCard = (open: boolean) => STORE
   ? `<div class="ext-install"><p style="margin:0 0 8px"><a class="btn primary big" href="${STORE}" rel="noopener">Add to Chrome</a></p><p class="fine" style="margin:0 0 10px;color:var(--muted)">Free. Works in Chrome, Edge, Brave and Arc.</p><details class="now"><summary>Install from source instead</summary>${SOURCE_STEPS}</details></div>`
-  : `<div class="ext-install"><p class="status"><span class="dot" aria-hidden="true"></span><span><strong>Chrome Web Store: in review.</strong> One-click “Add to Chrome” appears here as soon as Google approves it.</span></p><details class="now"${open ? " open" : ""}><summary class="btn primary">Install it now (1 minute)</summary>${SOURCE_STEPS}</details></div>`;
+  : `<div class="ext-install"><p class="status"><span><strong>Chrome Web Store: in review.</strong> One-click “Add to Chrome” appears here as soon as Google approves it.</span></p><details class="now"${open ? " open" : ""}><summary class="btn primary">Install it now (1 minute)</summary>${SOURCE_STEPS}</details></div>`;
 
 function layout(p: Page): string {
   const url = abs(p.path);
@@ -88,6 +91,8 @@ ${p.noindex ? '<meta name="robots" content="noindex">\n' : ""}
 <meta name="twitter:title" content="${esc(p.title)}">
 <meta name="twitter:description" content="${esc(p.description)}">
 <meta name="twitter:image" content="${abs("/og.png")}">
+<link rel="preload" href="/fonts/text.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/fonts/display.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/site.css">
 <script type="application/ld+json">${JSON.stringify(ld)}</script>
 </head>
@@ -96,12 +101,9 @@ ${p.noindex ? '<meta name="robots" content="noindex">\n' : ""}
 <div class="wrap">
 <header class="nav">
   <a class="brand" href="/"><img src="/logo.svg" width="30" height="24" alt="" aria-hidden="true">perch</a>
-  <a class="hide-sm" href="/nextjs/">Next.js</a>
-  <a class="hide-sm" href="/astro/">Astro</a>
-  <a class="hide-sm" href="/html/">HTML &amp; no-code</a>
-  <a class="hide-sm" href="/extension/">Extension</a>
+  <a href="/extension/">Extension</a>
   <a href="/agents/">For agents</a>
-  <a class="gh" href="${cfg.github}">GitHub</a>
+  <a href="${cfg.github}">GitHub</a>
 </header>
 </div>
 <main id="main">
@@ -109,16 +111,9 @@ ${p.body}
 </main>
 <footer>
 <div class="wrap">
-<div class="cols">
-  <span><strong>perch</strong> v${VERSION} · MIT · by <a href="https://github.com/mishanefedov">Michael Nefedov</a></span>
-  <a href="${cfg.github}">GitHub</a>
-  <a href="${cfg.npm}">npm</a>
-  <a href="/extension/">Browser extension</a>
-  <a href="/agents/">For AI agents</a>
-  <a href="/llms.txt">llms.txt</a>
-  <a href="/schema.json">schema.json</a>
-  <a href="${cfg.github}/issues">Report a problem</a>
-</div>
+  <p>Guides: <a href="/nextjs/">Next.js</a> <a href="/astro/">Astro</a> <a href="/html/">HTML and no-code</a> <a href="/extension/">Browser extension</a> <a href="/agents/">For agents</a></p>
+  <p>Files: <a href="/llms.txt">llms.txt</a> <a href="/schema.json">schema.json</a> <a href="${cfg.npm}">npm</a> <a href="${cfg.github}/issues">Report a problem</a></p>
+  <p>Perch v${VERSION}. MIT licence. By <a href="https://github.com/mishanefedov">Michael Nefedov</a>.</p>
 </div>
 </footer>
 ${p.noperch ? "" : `<script src="/perch.js" data-goal="#install" data-stickiness="0.6" data-tuner="true"${p.noask ? "" : ` data-ask="${esc(JSON.stringify(ASK))}"`} defer></script>`}
@@ -135,16 +130,11 @@ const howTo = (name: string, steps: string[]) => ({ "@context": "https://schema.
 
 // ---------------------------------------------------------------- home
 const FAQ: [string, string][] = [
-  ["What is Perch?", "Perch is a free, open-source pixel creature for websites. One script makes a small animated mascot that stands on your real headings, text and buttons, rides them while visitors scroll, and points at your call to action."],
-  ["How do I add a mascot to my website?", "Run npx perch-pet in your project folder. It finds your layout file, copies the script into your public folder and adds one script tag. Without a repo, paste one script tag before the closing body tag."],
-  ["Does Perch work with Next.js, Astro, SvelteKit, Nuxt and Vite?", "Yes. The setup command edits the right file for Next.js (app and pages router, including route groups), Astro, SvelteKit, Nuxt, Vite and plain HTML. For anything else, such as WordPress, Webflow or Shopify, paste the script tag."],
-  ["Will it slow down my site?", "The script is about 34 kB, 13 kB gzipped. It draws one small canvas, pauses in background tabs, adds no layout shift and makes no network requests. The tuner panel is a separate file that only loads on localhost (and on this demo site)."],
-  ["Does it track my visitors?", "No. There is no tracking and no analytics. The only request it can make is one optional fetch of your own creature file."],
-  ["Can I make my own character?", "Yes. On localhost, the tuner has a pixel editor for the body, legs, arms, colors and eyes. Download the JSON and run npx perch-pet creature ./creature.json."],
-  ["Does it work on phones?", "Yes. It uses a smaller size on touch screens and follows taps and scrolling. You can turn it off on phones with data-mobile=\"false\"."],
-  ["Can an AI coding agent install it?", "Yes. The setup is a deterministic command, not a prompt. Agents run npx perch-pet detect to see what it found, then npx perch-pet, and use --file when there is more than one place to choose."],
-  ["Can the creature ask my visitors a question?", "Yes. Set a question with up to three buttons: open a link, copy a code, scroll to a section, click your chat button, or just close. The creature stands still while the question is up, and it goes away when the visitor scrolls."],
-  ["Is it free?", "Yes. Perch is MIT licensed. The source is on GitHub."],
+  ["What is Perch?", "A free, open-source pixel creature for websites. One script makes a small animated mascot that stands on your real headings, text and buttons, rides them while visitors scroll, and points at your call to action."],
+  ["Which frameworks does it work with?", "The setup command edits the right file for Next.js (app and pages router, including route groups), Astro, SvelteKit, Nuxt, Vite and plain HTML. For WordPress, Webflow, Shopify and anything else, paste one script tag."],
+  ["Will it slow down my site?", "The script is 34 kB, 13 kB gzipped. It draws one small canvas, stops in background tabs, adds no layout shift and makes no network requests. The settings panel is a separate file that never loads for visitors."],
+  ["Does it track my visitors?", "No. There is no tracking and no analytics."],
+  ["Can I make my own character?", "Yes. The settings panel on localhost has a pixel editor for the body, legs, arms, colors and eyes. Download the JSON and run npx perch-pet creature ./creature.json."],
 ];
 
 pages.push({
@@ -167,94 +157,49 @@ pages.push({
   ],
   body: `
 <div class="wrap">
-<section class="hero" style="padding-top:40px">
-  <span class="eyebrow">free · open source · MIT</span>
-  <h1>A pixel creature that lives on <em>your website.</em></h1>
-  <p class="lead">Perch stands on your <strong>real headings, text and buttons</strong>, rides them while you scroll, and points at your call to action. One script tag. Tune it live on localhost, or right here.</p>
-  <div id="install" class="install"><span class="dollar" aria-hidden="true">$</span><code>npx perch-pet</code>${copy("npx perch-pet")}</div>
-  <div class="cta-row">
-    <a class="btn primary" href="${cfg.github}">View on GitHub</a>
-    <button type="button" class="btn" data-open-tuner>Open the tuner on this page</button>
-  </div>
-  <p class="fine">Next.js · Astro · SvelteKit · Nuxt · Vite · plain HTML · 13 kB gzipped · no tracking</p>
-  <p class="fine" style="margin-top:6px">Or put it on any website you visit: <a href="#extension">get the browser extension</a></p>
-  <div class="hero-art"><img src="/assets/hero.svg" width="960" height="300" alt="A pixel octopus hopping between a heading, text lines, a card and a button on a web page"></div>
-  <div class="chips" role="group" aria-label="Try another creature on this page">Try another one on this page:
-    ${["octopus", "blob", "cat", "ghost", "robot", "alien"].map((c) => `<button type="button" data-creature="${c}" aria-pressed="${c === "octopus"}">${c}</button>`).join("\n    ")}
-  </div>
+<section class="hero">
+  <h1>A pixel creature that lives on your website.</h1>
+  <p class="lead">It stands on your real headings, text and buttons, and points at your call to action. One script tag. Free and open source.</p>
+  <div id="install" class="install"><code><span aria-hidden="true">$ </span>npx perch-pet</code>${copy("npx perch-pet")}</div>
+  <p class="actions"><a class="btn primary" href="${cfg.github}">GitHub</a><button type="button" class="link" data-open-tuner>Try the settings panel on this page</button></p>
 </section>
-</div>
 
-<div class="wrap">
+<figure class="demo">
+  <video autoplay muted loop playsinline preload="metadata" width="760" height="475" aria-label="Screen recording of the Perch settings panel: picking the call to action, picking a card to ignore, and the command that saves both"><source src="/demo.mp4" type="video/mp4"><img src="/assets/demo.gif" width="760" height="475" alt="Screen recording of the Perch settings panel" loading="lazy"></video>
+  <figcaption>Pick the call to action, pick what to ignore, copy the command that saves both.</figcaption>
+</figure>
+
 <section id="how">
-  <h2>Three steps. No code changes.</h2>
-  <p class="sub">Perch is a package, not a rewrite. The command adds one script tag. Everything else happens in a panel on localhost.</p>
-  <ol class="steps">
-    <li><h3>Run one command</h3><p>It finds your layout file and adds the tag. If it finds more than one place, it asks you. Undo any time.</p><pre>npx perch-pet</pre></li>
-    <li><h3>Click the gear</h3><p>Open your site on localhost. Swap creatures, draw your own, switch on “show floors”, and click your call to action to pick it.</p><pre>localhost:3000  ⚙</pre></li>
-    <li><h3>Save with one command</h3><p>The panel prints the exact command for your choices. Paste it in your terminal.</p><pre>npx perch-pet set creature=cat stickiness=0.8</pre></li>
+  <h2>How it works</h2>
+  <ol class="plain">
+    <li><strong>Run one command.</strong> It finds your layout file and adds the script tag. Undo any time.<pre>npx perch-pet</pre></li>
+    <li><strong>Open your site on localhost and click the gear.</strong> Swap the creature, draw your own, and click your call to action to pick it.</li>
+    <li><strong>Run the command the panel prints.</strong><pre>npx perch-pet set creature=cat stickiness=0.8</pre></li>
   </ol>
 </section>
 
-<section id="demo">
-  <h2>See it work</h2>
-  <p class="sub">It jumps to what you click, rides the page while you scroll, and gets squashed when the page pushes it into the top. Then the tuner swaps it for a cat and an alien and edits its pixels.</p>
-  <div class="demo"><video autoplay muted loop playsinline preload="metadata" width="760" height="475" aria-label="Screen recording of the Perch demo and tuner"><source src="/demo.mp4" type="video/mp4"><img src="/assets/demo.gif" width="760" height="475" alt="Screen recording of the Perch demo and tuner" loading="lazy"></video></div>
-  <div class="pair">
-    <img src="/assets/tuner.png" loading="lazy" width="1000" height="700" alt="The Perch tuner panel on localhost with sliders, a creature picker and blue floor lines over the page">
-    <img src="/assets/editor.png" loading="lazy" width="1000" height="700" alt="The pixel editor in the Perch tuner with a palette and eye controls">
-  </div>
-</section>
-
 <section id="features">
-  <h2>Made to be left alone</h2>
-  <p class="sub">Defaults that work on most sites, and the small things that stop it from becoming a problem.</p>
-  <div class="grid">
-    <div class="card"><span class="ico" aria-hidden="true">🧱</span><h3>Stands on your real elements</h3><p>Headings, text lines, cards, buttons, forms. It stands on the letters, not on the box around them.</p></div>
-    <div class="card"><span class="ico" aria-hidden="true">🎯</span><h3>Finds your call to action</h3><p>A submit button, or a button that says “sign up” or “book a demo”. Point it somewhere else with one selector.</p></div>
-    <div class="card"><span class="ico" aria-hidden="true">🎛️</span><h3>Tune it live</h3><p>Stickiness, speed and size. “Show floors” draws what it found, so you see why it stands where it stands.</p></div>
-    <div class="card"><span class="ico" aria-hidden="true">🎨</span><h3>Draw your own</h3><p>A pixel editor for the body, legs, arms, colors and eyes. Six creatures are built in.</p></div>
-    <div class="card"><span class="ico" aria-hidden="true">🪶</span><h3>Light and private</h3><p>13 kB gzipped. No tracking, no network calls, no layout shift. The tuner never loads for visitors.</p></div>
-    <div class="card"><span class="ico" aria-hidden="true">♿</span><h3>Polite</h3><p>Never blocks clicks. Sits still with “reduce motion”. Hidden from screen readers. Skips popups and fixed headers.</p></div>
-  </div>
-</section>
-
-<section id="creatures">
-  <h2>Six creatures, or your own</h2>
-  <p class="sub">Octopus is the default. Pick one with <code>data-creature="cat"</code> or in the tuner.</p>
-  <img src="/assets/creatures.svg" width="980" height="170" loading="lazy" alt="The six Perch creatures: octopus, blob, cat, ghost, robot and alien">
-</section>
-
-<section id="extension">
-  <div class="agent ext">
-    <div>
-      <h2>Want it on any website?</h2>
-      <p class="sub" style="margin-bottom:18px">The Perch extension puts a creature on the pages you visit. Draw your own, choose the call to action and the things to ignore for each site, and hide it with one key.</p>
-      <ul class="tick"><li>One click on the toolbar icon, or <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd></li><li>The same tuner panel as here, saved in your browser</li><li>Asks for access to one tab, not every site, unless you choose so</li></ul>
-      <div style="margin-top:22px">${installCard(false)}</div>
-      <p class="fine" style="margin-top:14px"><a href="/extension/">How it works and what it can see</a></p>
-    </div>
-    <img src="/assets/ext-page.png" loading="lazy" width="1280" height="800" alt="A web page with a pixel creature on it and the Perch customize panel open in the browser extension">
-  </div>
+  <h2>What you get</h2>
+  <dl class="facts">
+    <dt>Stands on your real elements</dt><dd>Headings, lines of text, cards, buttons and forms. It rides them while visitors scroll.</dd>
+    <dt>Points at your call to action</dt><dd>It finds a submit button or a “Book a demo” button, or you pick one.</dd>
+    <dt>Asks a question</dt><dd>A speech bubble with up to three buttons. The creature stands still, and scrolling closes it.</dd>
+    <dt>Six creatures, or your own</dt><dd>Draw one in the pixel editor.</dd>
+    <dt>Light and private</dt><dd>13 kB gzipped, no tracking, no network requests.</dd>
+  </dl>
+  <img class="creatures" src="/assets/creatures.svg" width="980" height="170" loading="lazy" alt="The six Perch creatures: octopus, blob, cat, ghost, robot and alien">
 </section>
 
 <section id="agents">
-  <div class="agent">
-    <h2>Built for coding agents</h2>
-    <p class="sub">The setup is a command, not a skill file and not a prompt. It is deterministic: no network, no model, plain file edits. Give your agent this:</p>
-    <div class="prompt code"><pre id="agent-prompt">Add the Perch mascot to this site. Run \`npx perch-pet detect\` to see what it found, then \`npx perch-pet\` to install. If it lists several places, rerun with \`--file <path>\`. Open the dev server and check that the creature stands on the page elements and points at the main button.</pre>${copy("Add the Perch mascot to this site. Run `npx perch-pet detect` to see what it found, then `npx perch-pet` to install. If it lists several places, rerun with `--file <path>`. Open the dev server and check that the creature stands on the page elements and points at the main button.")}</div>
-    <div class="links"><a href="/agents/">Agent guide</a><a href="/llms.txt">llms.txt</a><a href="/llms-full.txt">llms-full.txt</a><a href="/schema.json">Options schema</a><a href="/AGENTS.md">AGENTS.md</a></div>
-  </div>
+  <h2>For coding agents</h2>
+  <p>Setup is a command, not a skill file. It makes plain file edits and needs no model. Give your agent this:</p>
+  <div class="prompt code"><pre id="agent-prompt">Add the Perch mascot to this site. Run \`npx perch-pet detect\` to see what it found, then \`npx perch-pet\` to install. If it lists several places, rerun with \`--file <path>\`. Open the dev server and check that the creature stands on the page elements and points at the main button.</pre>${copy("Add the Perch mascot to this site. Run `npx perch-pet detect` to see what it found, then `npx perch-pet` to install. If it lists several places, rerun with `--file <path>`. Open the dev server and check that the creature stands on the page elements and points at the main button.")}</div>
+  <p class="links"><a href="/agents/">Agent guide</a> <a href="/llms.txt">llms.txt</a> <a href="/schema.json">Options schema</a></p>
 </section>
 
 <section id="faq">
   <h2>Questions</h2>
   ${FAQ.map(([q, a]) => `<details><summary>${esc(q)}</summary><p>${esc(a)}</p></details>`).join("\n  ")}
-</section>
-
-<section style="text-align:center">
-  <h2>Give your site a pet.</h2>
-  <div id="install-2" class="install"><span class="dollar" aria-hidden="true">$</span><code>npx perch-pet</code>${copy("npx perch-pet")}</div>
 </section>
 </div>`,
 });
