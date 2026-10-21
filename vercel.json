@@ -144,5 +144,18 @@
         }
       ]
     }
+  ],
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "www.gettheperch.com"
+        }
+      ],
+      "destination": "https://gettheperch.com/:path*",
+      "permanent": true
+    }
   ]
 }
