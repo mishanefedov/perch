@@ -1,0 +1,28 @@
+:root { color-scheme: dark; --bg: #0b1020; --panel: #111833; --line: #1f2a4d; --text: #e6e9f5; --muted: #9aa6c7; --red: #e5484d; --blue: #38bdf8; }
+* { box-sizing: border-box; }
+body { width: 320px; margin: 0; padding: 14px; background: var(--bg); color: var(--text); font: 14px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; }
+header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+header img { image-rendering: pixelated; }
+header strong { font-size: 17px; letter-spacing: -0.02em; margin-right: auto; }
+a { color: var(--blue); }
+.gh { font-size: 12px; color: var(--muted); }
+.label { margin: 0 0 6px; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; }
+#chips { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+#chips button { background: var(--panel); border: 2px solid var(--line); border-radius: 10px; padding: 6px 4px 4px; cursor: pointer; color: var(--muted); font: 600 11px ui-monospace, Menlo, monospace; display: grid; justify-items: center; gap: 2px; }
+#chips button:hover { border-color: #33427a; }
+#chips button[aria-checked="true"] { border-color: var(--red); color: var(--text); }
+#chips canvas { width: 56px; height: 34px; image-rendering: pixelated; }
+.sliders { display: grid; gap: 6px; margin: 12px 0; }
+.sliders label { display: grid; grid-template-columns: 76px 1fr 30px; align-items: center; gap: 8px; color: var(--muted); }
+.sliders output { text-align: right; color: var(--text); font-variant-numeric: tabular-nums; }
+input[type=range] { width: 100%; accent-color: var(--red); }
+.primary { width: 100%; padding: 10px; border: 0; border-radius: 10px; background: var(--red); color: #fff; font: 700 15px system-ui; cursor: pointer; box-shadow: 3px 3px 0 #7f1d22; }
+.primary:hover { background: #ef5a5f; }
+.checks { margin: 12px 0 4px; display: grid; gap: 6px; }
+.checks label { display: flex; gap: 8px; align-items: baseline; }
+.checks small { color: var(--muted); }
+#msg { min-height: 18px; margin: 6px 0; color: #fbbf24; font-size: 12.5px; }
+footer { border-top: 1px solid var(--line); padding-top: 10px; margin-top: 6px; color: var(--muted); font-size: 12.5px; }
+:focus-visible { outline: 2px solid #f59e0b; outline-offset: 2px; }
+.secondary { width: 100%; margin-top: 8px; padding: 9px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); color: var(--text); font: 600 14px system-ui; cursor: pointer; }
+.secondary:hover { border-color: #33427a; background: #16203f; }

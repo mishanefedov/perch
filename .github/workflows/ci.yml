@@ -16,4 +16,6 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bun run typecheck
       - run: bun run build
+      - run: bun run extension:build
+      - run: node node_modules/playwright-core/cli.js install --with-deps chromium
       - run: bun run test

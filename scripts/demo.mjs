@@ -11,12 +11,13 @@ const port = Number(process.env.PORT) || 4173;
 // build first (needs bun); if bun is missing, use an existing dist/
 try {
   execFileSync("bun", ["run", "build"], { cwd: root, stdio: "inherit" });
+  execFileSync("bun", ["run", "extension:build"], { cwd: root, stdio: "inherit" });
   execFileSync("bun", ["run", "site:build"], { cwd: root, stdio: "inherit", env: { ...process.env, SITE_URL: `http://localhost:${port}` } });
 } catch {
   if (!existsSync(join(root, "site-dist/index.html"))) { console.error("Could not build the site and there is no site-dist/. Install bun (https://bun.sh), then run `bun install && bun run demo`."); process.exit(1); }
 }
 
-const types = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".css": "text/css", ".json": "application/json", ".svg": "image/svg+xml", ".png": "image/png", ".gif": "image/gif", ".mp4": "video/mp4", ".txt": "text/plain; charset=utf-8", ".md": "text/plain; charset=utf-8", ".xml": "application/xml" };
+const types = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".css": "text/css", ".json": "application/json", ".svg": "image/svg+xml", ".png": "image/png", ".gif": "image/gif", ".mp4": "video/mp4", ".txt": "text/plain; charset=utf-8", ".md": "text/plain; charset=utf-8", ".xml": "application/xml", ".zip": "application/zip" };
 const server = createServer((req, res) => {
   let path = decodeURIComponent((req.url ?? "/").split("?")[0]);
   if (path.startsWith("/fixtures/")) path = "/test" + path; // test pages used by the screenshot scripts

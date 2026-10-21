@@ -180,6 +180,12 @@ Selectors are built to match exactly the element you picked, as short as possibl
 | Copy command / script tag / JSON | Three ways to save the result |
 | Reset | Back to the defaults |
 
+## Browser extension
+
+Want the creature on any website you visit, not only your own? The [Perch extension](https://gettheperch.com/extension/) (Chrome and other Chromium browsers) runs the same script on the pages you choose. Click the toolbar icon, or press `Alt+Shift+P`. `Alt+Shift+T` opens the tuner on the page, so you can swap creatures, draw your own, and pick the goal and the things to ignore for that site. The creature and sliders are saved for every site, goal and ignore per site. By default it only touches the tab you click (`activeTab`). Access to all sites is optional, and asked for only if you switch on "On every site".
+
+Source and build: [`extension/`](extension/). Release steps and store listing: [`extension/README.md`](extension/README.md).
+
 ## Options
 
 Set them as `data-*` attributes on the script tag, with `npx perch-pet set key=value`, or in JS. Types and limits: [`schema.json`](schema.json).

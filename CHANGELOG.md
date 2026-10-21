@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- **Browser extension** (`extension/`, Chrome and other Chromium browsers): puts the creature on any page. Toolbar popup (creature, size, speed, stickiness, show or hide, always on this site, on every site), keyboard shortcuts, and the full tuner panel on the page (swap, draw your own, show floors, pick goal and ignore). Creature and sliders are saved for every site, goal and ignore per site. Minimal permissions by default (`activeTab`); access to all sites is optional.
+- Website: `/extension/` page, privacy policy, a home page section, and the creature asks "Want me on every website?" in a speech bubble.
+
 ## 0.1.1
 
 - **Setup finds every possible place, then asks.** It searches for all root layouts (any depth, so Next.js route groups like `app/(site)/layout.tsx` work), Astro layouts, SvelteKit, Nuxt and HTML pages, in the current folder and in folders below it (monorepos). One clear answer is used straight away. Several: a menu where you pick a number, several numbers (`1,2`), or paste a file or folder path.

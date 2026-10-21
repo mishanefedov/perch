@@ -5,3 +5,4 @@ test/.tmp
 dist
 site-dist
 .vercel
+extension-dist
