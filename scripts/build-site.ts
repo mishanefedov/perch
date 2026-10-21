@@ -32,7 +32,6 @@ const abs = (p: string) => SITE + p;
 interface Page { path: string; title: string; description: string; body: string; ld?: object[]; ogType?: string; noperch?: boolean; noask?: boolean; noindex?: boolean }
 
 // the creature on this site asks the same question the extension page answers (it uses the Ask feature of the library)
-const ASK = { text: "Want me on every website?", buttons: [{ label: "Get the extension", action: "link", value: "/extension/" }], delay: 7 };
 const pages: Page[] = [];
 
 // "Add to Chrome" once the store URL is in site/config.json, else the beta download
@@ -40,6 +39,9 @@ const pages: Page[] = [];
 // Until then nothing on the site sends people to a download. Set it in site/config.json (extension.chromeStoreUrl).
 const STORE = process.env.EXTENSION_STORE_URL ?? cfg.extension.chromeStoreUrl;
 const LIVE = !!STORE;
+
+// the creature on this site asks about the extension (it uses the Ask feature of the library); the button opens the store listing, or the install steps until there is one
+const ASK = { text: "Want me on every website?", buttons: [{ label: "Get the extension", action: "link", value: STORE || "/extension/#install", ...(STORE ? { newTab: true } : {}) }], delay: 7 };
 const extButton = (cls = "btn primary") => STORE
   ? `<a class="${cls}" href="${STORE}" rel="noopener">Add to Chrome</a>`
   : `<a class="${cls}" href="/extension/#install">Get the extension</a>`;
@@ -88,7 +90,8 @@ ${p.noindex ? '<meta name="robots" content="noindex">\n' : ""}
   <a class="hide-sm" href="/nextjs/">Next.js</a>
   <a class="hide-sm" href="/astro/">Astro</a>
   <a class="hide-sm" href="/html/">HTML &amp; no-code</a>
-${LIVE ? '  <a class="hide-sm" href="/extension/">Extension</a>\n' : ""}  <a href="/agents/">For agents</a>
+  <a class="hide-sm" href="/extension/">Extension</a>
+  <a href="/agents/">For agents</a>
   <a class="gh" href="${cfg.github}">GitHub</a>
 </header>
 </div>
@@ -101,14 +104,15 @@ ${p.body}
   <span><strong>perch</strong> v${VERSION} · MIT · by <a href="https://github.com/mishanefedov">Michael Nefedov</a></span>
   <a href="${cfg.github}">GitHub</a>
   <a href="${cfg.npm}">npm</a>
-${LIVE ? '  <a href="/extension/">Browser extension</a>\n' : ""}  <a href="/agents/">For AI agents</a>
+  <a href="/extension/">Browser extension</a>
+  <a href="/agents/">For AI agents</a>
   <a href="/llms.txt">llms.txt</a>
   <a href="/schema.json">schema.json</a>
   <a href="${cfg.github}/issues">Report a problem</a>
 </div>
 </div>
 </footer>
-${p.noperch ? "" : `<script src="/perch.js" data-goal="#install" data-stickiness="0.6" data-tuner="true"${p.noask || !LIVE ? "" : ` data-ask="${esc(JSON.stringify(ASK))}"`} defer></script>`}
+${p.noperch ? "" : `<script src="/perch.js" data-goal="#install" data-stickiness="0.6" data-tuner="true"${p.noask ? "" : ` data-ask="${esc(JSON.stringify(ASK))}"`} defer></script>`}
 <script src="/site.js" defer></script>
 </body>
 </html>
@@ -164,7 +168,7 @@ pages.push({
     <button type="button" class="btn" data-open-tuner>Open the tuner on this page</button>
   </div>
   <p class="fine">Next.js · Astro · SvelteKit · Nuxt · Vite · plain HTML · 13 kB gzipped · no tracking</p>
-${LIVE ? `  <p class="fine" style="margin-top:6px">Or put it on any website you visit: <a href="/extension/">get the browser extension</a></p>` : ""}
+  <p class="fine" style="margin-top:6px">Or put it on any website you visit: <a href="/extension/">get the browser extension</a></p>
   <div class="hero-art"><img src="/assets/hero.svg" width="960" height="300" alt="A pixel octopus hopping between a heading, text lines, a card and a button on a web page"></div>
   <div class="chips" role="group" aria-label="Try another creature on this page">Try another one on this page:
     ${["octopus", "blob", "cat", "ghost", "robot", "alien"].map((c) => `<button type="button" data-creature="${c}" aria-pressed="${c === "octopus"}">${c}</button>`).join("\n    ")}
@@ -212,7 +216,7 @@ ${LIVE ? `  <p class="fine" style="margin-top:6px">Or put it on any website you 
   <img src="/assets/creatures.svg" width="980" height="170" loading="lazy" alt="The six Perch creatures: octopus, blob, cat, ghost, robot and alien">
 </section>
 
-${LIVE ? `<section id="extension">
+<section id="extension">
   <div class="agent ext">
     <div>
       <h2>Want it on any website?</h2>
@@ -222,7 +226,7 @@ ${LIVE ? `<section id="extension">
     </div>
     <img src="/assets/ext-page.png" loading="lazy" width="1280" height="800" alt="A web page with a pixel creature on it and the Perch customize panel open in the browser extension">
   </div>
-</section>` : ""}
+</section>
 
 <section id="agents">
   <div class="agent">
@@ -382,27 +386,32 @@ npx perch-pet --remove               # undo</pre></div>
 // ---------------------------------------------------------------- extension
 const PRIVACY = "/extension/privacy/";
 pages.push({
-  path: "/extension/", noask: true, noindex: !LIVE, title: LIVE ? "Perch extension: a pixel creature on any website" : "Perch browser extension: coming to the Chrome Web Store",
+  path: "/extension/", noask: true, title: "Perch extension: a pixel creature on any website",
   description: "Free Chrome extension that puts a pixel creature on the pages you visit. It stands on real headings and buttons. Draw your own and set a goal per site.",
-  ld: !LIVE ? [] : [
+  ld: [
     breadcrumbLd("Browser extension", "/extension/"),
     { "@context": "https://schema.org", "@type": "SoftwareApplication", name: "Perch browser extension", applicationCategory: "BrowserApplication", operatingSystem: "Chrome, Chromium", softwareVersion: EXT_VERSION, url: abs("/extension/"), description: "A pixel creature that stands on the headings, text and buttons of the pages you visit.", isAccessibleForFree: true, offers: { "@type": "Offer", price: "0", priceCurrency: "USD" }, license: "https://opensource.org/licenses/MIT", author: { "@type": "Person", name: "Michael Nefedov", url: "https://github.com/mishanefedov" }, image: abs("/og.png") },
     howTo("Put a pixel creature on any website", ["Install the Perch extension.", "Click the toolbar icon and press Show on this page.", "Press Customize this page to change the creature, the goal and what to ignore."]),
   ],
   body: `<div class="wrap doc" style="max-width:860px">${crumbs(["/extension/", "Browser extension"])}
-<h1>${LIVE ? "Put a pixel creature on any website you visit" : "The Perch extension is coming to the Chrome Web Store"}</h1>
+<h1>Put a pixel creature on any website you visit</h1>
 <p>The Perch extension runs the same creature as the <a href="/">library</a> on the pages you open. It stands on the page's real headings, text and buttons, rides them while you scroll, and points at the main button. Free and open source.</p>
-<h2 id="install">${LIVE ? "Install" : "Not in the store yet"}</h2>
-${LIVE ? `<p>${extButton("btn primary")}</p><p class="fine" style="color:var(--muted)">Works in Chrome and other Chromium browsers (Edge, Brave, Arc).</p>` : `<p>The Chrome Web Store is the only place Chrome installs extensions from, and the listing has not been published yet. Watch the repository on GitHub (Watch, then Custom, then Releases) to hear when it is.</p><p><a class="btn" href="${cfg.github}">Watch Perch on GitHub</a></p>`}
-<details id="manual"><summary>For developers: install from source</summary>
+<h2 id="install">Install</h2>
+${LIVE ? `<p>${extButton("btn primary")}</p><p class="fine" style="color:var(--muted)">Works in Chrome and other Chromium browsers (Edge, Brave, Arc).</p>
+<details id="manual"><summary>Install from source instead (developers)</summary>
 <ol>
 <li><a href="${cfg.extension.zip}" download>Download perch-extension.zip</a> (v${EXT_VERSION}) and unzip it.</li>
 <li>Open <code>chrome://extensions</code> and switch on <strong>Developer mode</strong> (top right).</li>
 <li>Press <strong>Load unpacked</strong> and choose the unzipped folder.</li>
+</ol>
+</details>` : `<p>The Chrome Web Store listing is not live yet. Until it is, you can install the extension yourself in about a minute:</p>
+<ol id="manual">
+<li><a class="btn primary" href="${cfg.extension.zip}" download>Download perch-extension.zip</a> (v${EXT_VERSION}) and unzip it.</li>
+<li>Open <code>chrome://extensions</code> and switch on <strong>Developer mode</strong> (top right).</li>
+<li>Press <strong>Load unpacked</strong> and choose the unzipped folder.</li>
 <li>Pin the Perch icon from the puzzle-piece menu, open any website and click it.</li>
 </ol>
-<p class="fine" style="color:var(--muted)">Works in Chrome and other Chromium browsers (Edge, Brave, Arc). Firefox and Safari are not supported yet. Or build it yourself from <a href="${cfg.github}/tree/main/extension">the source</a>.</p>
-</details>
+<p class="fine" style="color:var(--muted)">Works in Chrome and other Chromium browsers (Edge, Brave, Arc). Firefox and Safari are not supported yet. Watch <a href="${cfg.github}">the repository</a> (Watch, Custom, Releases) to hear when the store listing goes live.</p>`}
 <h2>How it works</h2>
 <ol>
 <li><strong>Click the icon, press Show on this page.</strong> The creature lands on the page and goes to the main button. Press <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd> to show or hide it.</li>
@@ -474,7 +483,7 @@ write("404.html", layout({ path: "/404.html", title: "Not found · Perch", descr
 
 write("sitemap.xml", `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${pages.filter((p) => !p.noindex).map((p) => `  <url><loc>${abs(p.path)}</loc><lastmod>${TODAY}</lastmod></url>`).join("\n")}\n</urlset>\n`);
 write("robots.txt", `User-agent: *\nAllow: /\n\n# AI crawlers and assistants are welcome\n${["GPTBot", "OAI-SearchBot", "ChatGPT-User", "ClaudeBot", "Claude-User", "Claude-SearchBot", "anthropic-ai", "PerplexityBot", "Google-Extended", "Applebot-Extended", "CCBot"].map((b) => `User-agent: ${b}\nAllow: /\n`).join("\n")}\nSitemap: ${abs("/sitemap.xml")}\n`);
-write("llms.txt", `${readFileSync("llms.txt", "utf8").trimEnd()}\n\n## Website\n\n- [Home](${abs("/")}): what it is, install, FAQ${LIVE ? `\n- [Browser extension](${abs("/extension/")}): a creature on any website you visit` : ""}\n- [For agents](${abs("/agents/")}): commands, JSON output, flags, exit codes\n- [Next.js guide](${abs("/nextjs/")})\n- [Astro guide](${abs("/astro/")})\n- [HTML, WordPress, Webflow, Shopify](${abs("/html/")})\n`);
+write("llms.txt", `${readFileSync("llms.txt", "utf8").trimEnd()}\n\n## Website\n\n- [Home](${abs("/")}): what it is, install, FAQ\n- [Browser extension](${abs("/extension/")}): a creature on any website you visit\n- [For agents](${abs("/agents/")}): commands, JSON output, flags, exit codes\n- [Next.js guide](${abs("/nextjs/")})\n- [Astro guide](${abs("/astro/")})\n- [HTML, WordPress, Webflow, Shopify](${abs("/html/")})\n`);
 write("vercel-headers-check.txt", "ok\n");
 rmSync(join(OUT, "vercel-headers-check.txt"));
 
