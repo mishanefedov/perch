@@ -137,3 +137,15 @@ test("the CLI's ask rules and the library's validateAsk agree", async () => {
   ];
   for (const s of samples) assert.equal(validateAsk(s).length === 0, askProblems(s).length === 0, JSON.stringify(s));
 });
+
+test("the install prints one star line at the end; dry run, set, detect and remove do not", async () => {
+  const dir = project(html);
+  const line = "Do you like it? Star it: github.com/mishanefedov/perch";
+  assert.ok(!(await capture(["--dry"], dir)).text.includes(line), "not on a dry run");
+  const install = await capture([], dir);
+  assert.ok(install.text.trimEnd().endsWith(line), "last line of a real install");
+  assert.equal(install.text.split(line).length - 1, 1, "once");
+  assert.ok(!(await capture(["set", "stickiness=0.8"], dir)).text.includes(line), "not on set");
+  assert.ok(!(await capture(["detect"], dir)).text.includes(line), "not in the JSON that agents read");
+  assert.ok(!(await capture(["--remove"], dir)).text.includes(line), "not on remove");
+});
