@@ -36,7 +36,7 @@ const pages: Page[] = [];
 const STORE = cfg.extension.chromeStoreUrl;
 const extButton = (cls = "btn primary") => STORE
   ? `<a class="${cls}" href="${STORE}" rel="noopener">Add to Chrome</a>`
-  : `<a class="${cls}" href="/extension/#install">Get the extension (beta)</a>`;
+  : `<a class="${cls}" href="/extension/#install">Get the extension</a>`;
 
 function layout(p: Page): string {
   const url = abs(p.path);
@@ -387,7 +387,7 @@ pages.push({
 <h1>Put a pixel creature on any website you visit</h1>
 <p>The Perch extension runs the same creature as the <a href="/">library</a> on the pages you open. It stands on the page's real headings, text and buttons, rides them while you scroll, and points at the main button. Free and open source.</p>
 <h2 id="install">Install</h2>
-${STORE ? `<p>${extButton()}</p><p class="fine" style="color:var(--muted)">Works in Chrome and other Chromium browsers (Edge, Brave, Arc).</p>` : `<div class="note"><strong>Beta.</strong> The extension is not in the Chrome Web Store yet. You can install it by hand in about a minute.</div>
+${STORE ? `<p>${extButton()}</p><p class="fine" style="color:var(--muted)">Works in Chrome and other Chromium browsers (Edge, Brave, Arc).</p>` : `<div class="note">The Chrome Web Store listing is waiting for review. Until it is live, you can install the extension by hand in about a minute.</div>
 <ol>
 <li><a class="btn primary" href="${cfg.extension.zip}" download>Download perch-extension.zip</a> (v${EXT_VERSION}) and unzip it.</li>
 <li>Open <code>chrome://extensions</code> and switch on <strong>Developer mode</strong> (top right).</li>

@@ -40,17 +40,51 @@ Chrome 137 and later ignore `--load-extension` in the branded Chrome build, so t
 
 ## Release to the Chrome Web Store
 
-1. **Developer account:** https://chrome.google.com/webstore/devconsole, sign in, accept the terms. Chrome charges a one-time registration fee (about $5; check the current amount on the sign-up page).
-2. **Bump the version** in `manifest.json` (every upload needs a higher number), then `bun run extension:build`.
-3. **Upload** `extension-dist/perch-extension.zip` as a new item.
-4. **Store listing** (text below). Screenshots: `extension/store/ext-page.png`, `ext-editor.png`, `ext-popup.png` (1280 x 800 and a 320 wide popup). Small promo tile: `extension/store/promo-small-440x280.png`. Category: Fun, or Developer Tools. Language: English.
-5. **Privacy tab:** privacy policy URL `https://gettheperch.com/extension/privacy/`. Single purpose: "Show a pixel creature on web pages the user chooses." Declare: no personal data collected, no remote code. Permission reasons:
-   - `activeTab`: add the creature to the tab the user clicks.
-   - `scripting`: inject the creature script into that tab.
-   - `storage`: save the user's creature and settings.
-   - Optional all-sites access: only if the user turns on "On every site" or "Always on this site".
-6. **Submit for review.** Reviews can take from hours to several days, and broad host permissions slow them down, which is why the default is `activeTab`.
-7. **When it is approved:** copy the store URL into `site/config.json` under `extension.chromeStoreUrl`, run `vercel deploy --prod`. The site buttons change from "Get the extension (beta)" to "Add to Chrome". Add the badge to the README.
+What blocks a real "Add to Chrome" link is only Google: Chrome installs extensions from its store, and a store listing needs your developer account and a review. Everything else is prepared in this folder.
+
+**1. Developer account (once, about 10 minutes).** https://chrome.google.com/webstore/devconsole: sign in with the Google account that should own the listing, accept the terms, pay the one-time registration fee (about $5; the page shows the current amount) and complete the identity or contact verification it asks for.
+
+**2. New item.** Upload `extension-dist/perch-extension.zip` (`bun run extension:build` makes it). The version comes from `manifest.json`; every later upload needs a higher number.
+
+**3. Store listing tab.**
+
+| Field | Use |
+|---|---|
+| Name, summary, description | The listing text below |
+| Category | Fun (or Developer Tools) |
+| Language | English |
+| Icon (128 x 128) | Taken from the zip (`icons/icon-128.png`) |
+| Screenshots (up to 5, 1280 x 800) | `store/ext-popup-1280x800.png`, `store/ext-page.png`, `store/ext-pick.png`, `store/ext-editor.png`, `store/ext-blog.png` |
+| Small promo tile (440 x 280) | `store/promo-small-440x280.png` |
+| Marquee promo tile (1400 x 560, optional, used when featured) | `store/promo-marquee-1400x560.png` |
+| Promo video (optional) | A YouTube link. Not needed for approval |
+| Homepage / support URL | `https://gettheperch.com/extension/` and `https://github.com/mishanefedov/perch/issues` |
+
+**4. Privacy tab.**
+
+- Privacy policy URL: `https://gettheperch.com/extension/privacy/`
+- Single purpose: "Show a pixel creature on the web pages the user chooses."
+- Permission reasons:
+  - `activeTab`: add the creature to the tab the user clicks.
+  - `scripting`: inject the creature script into that tab.
+  - `storage`: save the user's creature and settings.
+  - Optional access to all sites: only if the user turns on "On every site" or "Always on this site", so the creature can show up without a click.
+- Remote code: No. All code is inside the package.
+- Data usage: collects no user data. Tick the three certifications (not sold, not used for unrelated purposes, not used for creditworthiness).
+
+**5. Test instructions** (the reviewer notes field):
+
+```
+No account or login is needed. After installing, open any normal web page (for example https://example.com), click the Perch toolbar icon and press "Show on this page". A small pixel creature appears and walks on the page's headings and text. Press "Customize this page" to open the settings panel (swap creature, pixel editor, pick goal). "Always on this site" and "On every site" ask for host permission first. The extension collects no data and makes no network requests. Source: https://github.com/mishanefedov/perch/tree/main/extension
+```
+
+**6. Distribution.** Visibility: Public. Regions: all. Submit for review. Reviews can take hours to several days, and broad host permissions slow them down, which is why the default is `activeTab`.
+
+**7. When it is approved (about two minutes of work).** Copy the listing URL into `site/config.json` under `extension.chromeStoreUrl`, then `vercel deploy --prod`. Every "Get the extension" button on gettheperch.com becomes "Add to Chrome" and links to the store. Add the store badge to the README.
+
+**Also publish to Microsoft Edge Add-ons.** The same zip works unchanged. The dev account at https://partner.microsoft.com/dashboard/microsoftedge is free. It gives Edge users a one-click link too.
+
+**Later releases can be automated.** After the first upload, the Chrome Web Store API can publish new versions from CI (it needs an OAuth client and refresh token stored as repository secrets). Not set up yet.
 
 Listing text:
 

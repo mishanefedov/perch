@@ -132,7 +132,10 @@ export function mountTuner(api: PerchApi, hooks: TunerHooks = {}): () => void {
   const out = $<HTMLTextAreaElement>(".out");
   const field = (id: string) => $<HTMLInputElement>("#" + id);
 
+  // Escape closes the editor, then the panel, wherever the focus is (the page's own key handlers come first)
+  const onEscape = (e: KeyboardEvent) => { if (e.key === "Escape" && !e.defaultPrevented) { if (editor) closeEditor(); else show(false); } };
   const show = (open: boolean) => {
+    if (open) addEventListener("keydown", onEscape); else removeEventListener("keydown", onEscape);
     panel.hidden = !open; gear.hidden = open || hooks.gear === false;
     gear.setAttribute("aria-expanded", String(open));
     if (open) (panel.querySelector("select") as HTMLElement).focus(); else gear.focus();
