@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- `npx perch-pet` ends a successful install with one line: "Do you like it? Star it: github.com/mishanefedov/perch". Not on `--dry`, `set`, `detect` or `--remove`, so the JSON that agents read stays clean.
+- `npx perch-pet` ends a successful install with one line: "Do you like it? Star it: github.com/mishanefedov/perch". Not on `--dry`, `set`, `detect` or `--remove`, so the JSON that agents read stays clean. The settings panel has the same line at the bottom.
 
 - **Ask**: the creature can ask visitors a question in a speech bubble (`ask` option, `data-ask`, `perch-pet set ask=...`, a section in the tuner with live preview). Up to three buttons: open a link, copy text, scroll to an element, click an element, send an event, or close. The creature stands still while the bubble is up, and scrolling closes it. In the extension the question is saved per site.
 - The site only promotes the browser extension once there is a Chrome Web Store link (`extension.chromeStoreUrl` in `site/config.json`). Until then the extension page says it is coming, is not indexed, and the zip sits under "For developers".
