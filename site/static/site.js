@@ -7,6 +7,9 @@
       if (navigator.clipboard) navigator.clipboard.writeText(text).then(done, done); else done();
     });
   });
+  document.querySelectorAll("[data-open-tuner]").forEach(function (b) {
+    b.addEventListener("click", function () { window.dispatchEvent(new Event("perch:tuner")); });
+  });
   var chips = document.querySelectorAll("[data-creature]");
   chips.forEach(function (b) {
     b.addEventListener("click", function () {

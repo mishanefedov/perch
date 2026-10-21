@@ -147,7 +147,7 @@ Exit codes: `0` done, `1` nothing found, `2` a choice is needed and there is no 
 
 ## The tuner
 
-On `localhost`, `127.0.0.1`, `*.local`, `*.localhost`, `*.test` and `192.168.*` / `10.*` addresses, `perch.js` loads `perch-tuner.js` from the same folder and shows a gear button at the bottom left. Anywhere else it does not load, unless you add `?perch=tune` to the URL (`?perch=off` clears it) or set `data-tuner="true"`.
+On `localhost`, `127.0.0.1`, `*.local`, `*.localhost`, `*.test` and `192.168.*` / `10.*` addresses, `perch.js` loads `perch-tuner.js` from the same folder and shows a gear button at the bottom left. Anywhere else it does not load, unless you add `?perch=tune` to the URL (`?perch=off` clears it) or set `data-tuner="true"` on the script tag. `npx perch-pet` never writes `data-tuner`, so a site you set up with it never shows the panel to visitors. [gettheperch.com](https://gettheperch.com) sets it on purpose, so you can try the tuner there. A page can open the panel with `window.dispatchEvent(new Event("perch:tuner"))`.
 
 **Pick the goal and the elements to ignore**
 

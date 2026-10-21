@@ -112,7 +112,7 @@ export function mountTuner(api: PerchApi): () => void {
       <button class="b" data-copy="json">Copy JSON</button>
       <button class="b" data-reset>Reset</button>
     </div>
-    <p class="hint">Run the command in your project folder to save these values. Floors are blue, the goal is green. This panel only shows on localhost.</p>
+    <p class="hint">Run the command in your project folder to save these values. Floors are blue, the goal is green. On a live site this panel is off unless data-tuner is set.</p>
     </div>
   </section>`;
 
@@ -269,7 +269,11 @@ export function mountTuner(api: PerchApi): () => void {
   $<HTMLButtonElement>(".x").addEventListener("click", () => show(false));
   panel.addEventListener("keydown", (e) => { if (e.key === "Escape") { if (editor) closeEditor(); else show(false); } });
 
+  // a page can open the panel with: window.dispatchEvent(new Event("perch:tuner"))
+  const openFromPage = () => show(true);
+  addEventListener("perch:tuner", openFromPage);
+
   document.body.appendChild(host);
   sync();
-  return () => host.remove();
+  return () => { removeEventListener("perch:tuner", openFromPage); host.remove(); };
 }
