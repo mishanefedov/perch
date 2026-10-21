@@ -1,13 +1,13 @@
 <div align="center">
 
-<img src="https://raw.githubusercontent.com/mishanefedov/perch/main/assets/hero.svg" alt="A pixel octopus hopping between a heading, text lines, a card and a button on a web page" width="760">
+<img src="https://raw.githubusercontent.com/mishanefedov/perch/main/site/static/logo.svg" alt="Perch: a pixel octopus" width="96">
 
 # perch
 
 **A pixel creature that lives on your website.**<br>
-It stands on your real headings, text and buttons, and points at your call to action.<br>
-One script tag. Tuned live on localhost.<br>
-[gettheperch.com](https://gettheperch.com)
+It stands on your real headings, text and buttons, and points at your call to action.
+
+[Website](https://gettheperch.com) &nbsp;·&nbsp; [Quick start](#quick-start) &nbsp;·&nbsp; [Browser extension](https://gettheperch.com/extension/) &nbsp;·&nbsp; [Options](#options) &nbsp;·&nbsp; [Report a bug](https://github.com/mishanefedov/perch/issues)
 
 [![npm](https://img.shields.io/npm/v/perch-pet?color=cb3837)](https://www.npmjs.com/package/perch-pet)
 [![CI](https://github.com/mishanefedov/perch/actions/workflows/ci.yml/badge.svg)](https://github.com/mishanefedov/perch/actions/workflows/ci.yml)
@@ -15,11 +15,41 @@ One script tag. Tuned live on localhost.<br>
 ![gzip](https://img.shields.io/badge/script-13%20kB%20gzip-2563eb)
 ![requests](https://img.shields.io/badge/network%20requests-0-16a34a)
 
-<img src="https://raw.githubusercontent.com/mishanefedov/perch/main/assets/demo.gif" alt="Demo: the tuner on localhost. Pick the call to action by clicking Book a demo, the octopus walks there and points at it. Pick a card to ignore with the arrow-up key. The panel prints the command that saves both." width="760">
+<br>
 
-<sub>Above: pick the goal by clicking it, pick a card to ignore, copy the command that saves both.</sub>
+<img src="https://raw.githubusercontent.com/mishanefedov/perch/main/assets/demo.gif" alt="Demo: the settings panel on localhost. Pick the call to action by clicking Book a demo, the octopus walks there and points at it. Pick a card to ignore with the arrow-up key. The panel prints the command that saves both." width="760">
+
+<sub>Pick the goal by clicking it, pick a card to ignore, copy the command that saves both.</sub>
 
 </div>
+
+<br>
+
+```bash
+npx perch-pet
+```
+
+<details>
+<summary><b>Contents</b></summary>
+
+- [What it does](#what-it-does)
+- [Quick start](#quick-start)
+- [How it works](#how-it-works)
+- [Setup](#setup)
+- [The tuner](#the-tuner)
+- [Browser extension](#browser-extension)
+- [Options](#options)
+- [Ask visitors a question](#ask-visitors-a-question)
+- [Creatures](#creatures)
+- [From JavaScript](#from-javascript)
+- [For AI coding agents](#for-ai-coding-agents)
+- [Performance, privacy, accessibility](#performance-privacy-accessibility)
+- [Troubleshooting](#troubleshooting)
+- [Limits](#limits)
+- [Compared with](#compared-with)
+- [Contributing](#contributing)
+
+</details>
 
 ## What it does
 

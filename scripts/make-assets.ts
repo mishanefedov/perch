@@ -36,52 +36,6 @@ function sprite(spec: CreatureSpec, px: number, id: string) {
 
 const BASE_CSS = `@keyframes flipA{0%{opacity:1}50%{opacity:0}}@keyframes flipB{0%{opacity:0}50%{opacity:1}}@keyframes blink{0%,94%{opacity:0}95%,98%{opacity:1}99%,100%{opacity:0}}`;
 
-// ---------- hero: the octopus hopping across a page ----------
-function hero() {
-  const px = 4;
-  const s = sprite(CREATURES.octopus, px, "o");
-  const W = 960, H = 300;
-  const bars = [
-    { x: 90, y: 86, w: 520, h: 30, c: "#64748b", o: 0.55 },   // heading
-    { x: 90, y: 150, w: 400, h: 10, c: "#64748b", o: 0.3 },   // paragraph
-    { x: 90, y: 172, w: 340, h: 10, c: "#64748b", o: 0.3 },
-    { x: 640, y: 120, w: 230, h: 110, c: "#64748b", o: 0.14, r: 14 }, // card
-  ];
-  const cta = { x: 90, y: 226, w: 190, h: 44 };
-  // stand points: [x centre, y of the floor]
-  const spots: [number, number][] = [[330, 86], [250, 150], [760, 120], [185, 226]];
-  const stand = 1.5, jump = 0.8, total = spots.length * (stand + jump);
-  const kx: string[] = [], ky: string[] = [];
-  const pct = (t: number) => ((t / total) * 100).toFixed(2) + "%";
-  const pos = (p: [number, number]) => [p[0] - s.w / 2, p[1] - s.foot];
-  let t = 0;
-  for (let i = 0; i < spots.length; i++) {
-    const a = spots[i], b = spots[(i + 1) % spots.length];
-    const [ax, ay] = pos(a), [bx, by] = pos(b);
-    const apex = Math.min(ay, by) - 46;
-    kx.push(`${pct(t)}{transform:translateX(${ax}px)}`);
-    ky.push(`${pct(t)}{transform:translateY(${ay}px);animation-timing-function:cubic-bezier(.2,.7,.4,1)}`);
-    t += stand;
-    kx.push(`${pct(t)}{transform:translateX(${ax}px)}`); // stays until it jumps
-    ky.push(`${pct(t)}{transform:translateY(${ay}px);animation-timing-function:cubic-bezier(.2,.7,.4,1)}`);
-    ky.push(`${pct(t + jump / 2)}{transform:translateY(${apex}px);animation-timing-function:cubic-bezier(.6,0,.8,.3)}`);
-    t += jump;
-    kx.push(`${pct(t)}{transform:translateX(${bx}px);animation-timing-function:linear}`);
-    ky.push(`${pct(t)}{transform:translateY(${by}px)}`);
-  }
-  const css = `${BASE_CSS}${s.css}
-@keyframes mx{${kx.join("")}}@keyframes my{${ky.join("")}}
-.mx{animation:mx ${total}s linear infinite}.my{animation:my ${total}s linear infinite}
-.bar{fill:#64748b}.btn{fill:#2563eb}.btnt{fill:#fff;font:600 17px system-ui,-apple-system,Segoe UI,sans-serif}`;
-  const bar = (b: { x: number; y: number; w: number; h: number; o: number; r?: number }) => `<rect class="bar" x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" rx="${b.r ?? b.h / 2}" opacity="${b.o}"/>`;
-  return `<svg xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="A pixel octopus hopping between a heading, text lines, a card and a button on a web page">
-<style>${css}</style>
-${bars.map(bar).join("")}
-<rect class="btn" x="${cta.x}" y="${cta.y}" width="${cta.w}" height="${cta.h}" rx="10"/><text class="btnt" x="${cta.x + cta.w / 2}" y="${cta.y + 28}" text-anchor="middle">Join the waitlist</text>
-<g class="mx"><g class="my">${s.svg}</g></g>
-</svg>`;
-}
-
 // ---------- lineup: every creature ----------
 function lineup() {
   const px = 5, names = Object.keys(CREATURES);
@@ -113,6 +67,5 @@ function logo() {
 mkdirSync("site/static", { recursive: true });
 writeFileSync("site/static/logo.svg", logo());
 writeFileSync("site/static/favicon.svg", logo());
-writeFileSync("assets/hero.svg", hero());
 writeFileSync("assets/creatures.svg", lineup());
-console.log("assets/hero.svg, assets/creatures.svg");
+console.log("assets/creatures.svg, site/static/logo.svg");

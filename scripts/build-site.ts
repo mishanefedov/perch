@@ -38,7 +38,7 @@ mkdirSync(OUT, { recursive: true });
 cpSync("site/static", OUT, { recursive: true });
 for (const f of ["perch.js", "perch-tuner.js"]) cpSync(join("dist", f), join(OUT, f));
 mkdirSync(join(OUT, "assets"), { recursive: true });
-for (const f of ["hero.svg", "creatures.svg", "tuner.png", "editor.png", "demo.gif"]) cpSync(join("assets", f), join(OUT, "assets", f));
+for (const f of ["creatures.svg", "tuner.png", "editor.png", "demo.gif"]) cpSync(join("assets", f), join(OUT, "assets", f));
 for (const f of ["schema.json", "llms-full.txt", "AGENTS.md"]) cpSync(f, join(OUT, f));
 // the browser extension: the zip people can download while it is not (yet) in the Chrome Web Store, and its screenshots
 if (existsSync("extension-dist/perch-extension.zip")) cpSync("extension-dist/perch-extension.zip", join(OUT, "perch-extension.zip"));
@@ -197,7 +197,6 @@ pages.push({
   </div>
   <p class="fine">Next.js · Astro · SvelteKit · Nuxt · Vite · plain HTML · 13 kB gzipped · no tracking</p>
   <p class="fine" style="margin-top:6px">Or put it on any website you visit: <a href="/extension/">get the browser extension</a></p>
-  <div class="hero-art"><img src="/assets/hero.svg" width="960" height="300" alt="A pixel octopus hopping between a heading, text lines, a card and a button on a web page"></div>
   <div class="chips" role="group" aria-label="Try another creature on this page">Try another one on this page:
     ${["octopus", "blob", "cat", "ghost", "robot", "alien"].map((c) => `<button type="button" data-creature="${c}" aria-pressed="${c === "octopus"}">${c}</button>`).join("\n    ")}
   </div>
@@ -205,6 +204,12 @@ pages.push({
 </div>
 
 <div class="wrap">
+<section id="creatures">
+  <h2>Six creatures, or your own</h2>
+  <p class="sub">Octopus is the default. Pick one with <code>data-creature="cat"</code> or in the tuner.</p>
+  <img src="/assets/creatures.svg" width="980" height="170" loading="lazy" alt="The six Perch creatures: octopus, blob, cat, ghost, robot and alien">
+</section>
+
 <section id="how">
   <h2>Three steps. No code changes.</h2>
   <p class="sub">Perch is a package, not a rewrite. The command adds one script tag. Everything else happens in a panel on localhost.</p>
@@ -213,12 +218,6 @@ pages.push({
     <li><h3>Click the gear</h3><p>Open your site on localhost. Swap creatures, draw your own, switch on “show floors”, and click your call to action to pick it.</p><pre>localhost:3000  ⚙</pre></li>
     <li><h3>Save with one command</h3><p>The panel prints the exact command for your choices. Paste it in your terminal.</p><pre>npx perch-pet set creature=cat stickiness=0.8</pre></li>
   </ol>
-</section>
-
-<section id="creatures">
-  <h2>Six creatures, or your own</h2>
-  <p class="sub">Octopus is the default. Pick one with <code>data-creature="cat"</code> or in the tuner.</p>
-  <img src="/assets/creatures.svg" width="980" height="170" loading="lazy" alt="The six Perch creatures: octopus, blob, cat, ghost, robot and alien">
 </section>
 
 <section id="demo">

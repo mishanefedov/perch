@@ -45,7 +45,6 @@ button:hover, .btn:hover { background: #243063; color: #fff; }
 .btn.primary:hover { background: #ef5a5f; }
 .cta-row { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin-top: 30px; }
 .fine { color: var(--muted); font-size: 15px; margin-top: 22px; }
-.hero-art { margin: 36px auto 0; max-width: 960px; border: 1px solid var(--line); border-radius: 18px; background: #0d1430cc; padding: 14px; }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; align-items: center; margin: 22px 0 0; font-size: 15px; color: var(--muted); }
 .chips button { font: 600 14px var(--mono); padding: 6px 12px; }
 .chips button[aria-pressed="true"] { background: var(--red); border-color: var(--red); color: #fff; }
