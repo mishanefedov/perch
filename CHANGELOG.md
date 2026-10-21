@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.2
 
 - `npx perch-pet` ends a successful install with one line: "Do you like it? Star it: github.com/mishanefedov/perch". Not on `--dry`, `set`, `detect` or `--remove`, so the JSON that agents read stays clean. The settings panel has the same line at the bottom.
 

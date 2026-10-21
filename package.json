@@ -1,6 +1,6 @@
 {
   "name": "perch-pet",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "A pixel creature that lives on your website, stands on your real elements and points at your call to action. One script tag, tuned live on localhost. Octopus, cat, robot, ghost, alien, blob, or draw your own.",
   "keywords": [
     "mascot",
