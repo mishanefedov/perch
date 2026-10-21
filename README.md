@@ -12,7 +12,7 @@ One script tag. Tuned live on localhost.<br>
 [![npm](https://img.shields.io/npm/v/perch-pet?color=cb3837)](https://www.npmjs.com/package/perch-pet)
 [![CI](https://github.com/mishanefedov/perch/actions/workflows/ci.yml/badge.svg)](https://github.com/mishanefedov/perch/actions/workflows/ci.yml)
 [![license](https://img.shields.io/npm/l/perch-pet)](LICENSE)
-![gzip](https://img.shields.io/badge/script-10%20kB%20gzip-2563eb)
+![gzip](https://img.shields.io/badge/script-13%20kB%20gzip-2563eb)
 ![requests](https://img.shields.io/badge/network%20requests-0-16a34a)
 
 <img src="https://raw.githubusercontent.com/mishanefedov/perch/main/assets/demo.gif" alt="Demo: the tuner on localhost. Pick the call to action by clicking Book a demo, the octopus walks there and points at it. Pick a card to ignore with the arrow-up key. The panel prints the command that saves both." width="760">
@@ -87,6 +87,7 @@ If the goal is inside a form, it stands on the form and points at the button. `d
 | You scroll fast | Squashes and braces. If the page pushes it into the top, it is knocked off and falls to the next floor |
 | You drag it | It is held. On release it is thrown with your mouse speed |
 | `celebrate()` | Jumps three times with a happy face |
+| A question is showing ([Ask](#ask-visitors-a-question)) | Stands still until the bubble closes. Scrolling closes it at once |
 
 **Output.** It adds one `<div data-perch-root>` with one `<canvas>` to `<body>`: `position: fixed`, `pointer-events: none` except on the creature itself, `aria-hidden`. When it lands on a floor it plays a short 3–7 px `transform` animation on that element, unless the element already has a `transform` (turn off with `bounce: false`). It writes nothing else to your page.
 
@@ -177,6 +178,7 @@ Selectors are built to match exactly the element you picked, as short as possibl
 | Drag and throw, Elements dip, Run on phones | Toggles for `draggable`, `bounce`, `mobile` |
 | Show floors | The overlay described above |
 | Goal, Ignore, Top space | Selectors and pixels, with Pick buttons |
+| Ask visitors a question | Question text, up to three buttons and what each does, delay, how often. Applies live, with a Preview button |
 | Copy command / script tag / JSON | Three ways to save the result |
 | Reset | Back to the defaults |
 
@@ -205,11 +207,43 @@ Set them as `data-*` attributes on the script tag, with `npx perch-pet set key=v
 | `draggable` | `true` | Drag and throw |
 | `bounce` | `true` | Landing animation on the element |
 | `zIndex` | `9999` | Layer order |
+| `ask` | none | A question in a speech bubble: [text, buttons, delay](#ask-visitors-a-question). JSON on the script tag: `data-ask='{"text":"..."}'` |
 | `tuner` | automatic | Script tag only: `true` or `false` forces the panel on or off |
 
 ```html
 <script src="/perch.js" data-creature="robot" data-stickiness="0.8" data-goal=".hero a.cta" defer></script>
 ```
+
+## Ask visitors a question
+
+The creature can ask a question in a speech bubble: your text, up to three buttons, and what each button does. Two rules apply to every question, wherever it comes from: **the creature stands still while the bubble is up, and the bubble goes away as soon as the visitor scrolls.** Dragging the creature or pressing Esc closes it too.
+
+```html
+<script src="/perch.js" defer
+  data-ask='{"text":"Want a quick demo?","buttons":[
+    {"label":"Book a demo","action":"link","value":"/demo"},
+    {"label":"Copy promo code","action":"copy","value":"PERCH10"},
+    {"label":"No thanks"}],"delay":8}'></script>
+```
+
+| Field | Meaning |
+|---|---|
+| `text` | The question, up to 200 characters |
+| `buttons` | Up to 3. The first one is highlighted. Each has a `label` (up to 40 characters) and an `action` |
+| `delay` | Seconds on the page before it shows. Default 6, at most 60 |
+| `once` | `session` (default): once per browser session. `forever`: once ever. `always`: on every visit |
+| `id` | Name used to remember that it was seen. Default: made from the text and buttons |
+
+| Button `action` | `value` | Does |
+|---|---|---|
+| `link` | URL (`http`, `https`, `mailto`, `tel` or a relative path). `javascript:` and `data:` are refused | Opens it. `"newTab": true` opens a new tab |
+| `copy` | The text | Copies it, shows "Copied", then closes |
+| `scroll` | CSS selector | Scrolls to the element |
+| `click` | CSS selector | Clicks the element, for example to open your chat widget |
+| `event` | Event name | Dispatches it on `window`, with `detail.label`: `addEventListener("open-chat", ...)` |
+| `close` (or no value) | none | Just closes |
+
+Set it in the [tuner](#the-tuner) (section "Ask visitors a question", live preview), or with the command: `npx perch-pet set ask='{"text":"Want a demo?","buttons":[{"label":"Yes","action":"link","value":"/demo"}]}'`. `npx perch-pet set ask=` removes it. In JS: `Perch.init({ ask: { ... } })`. The command and the panel check the JSON against [`schema.json`](schema.json). Seen questions are remembered in `sessionStorage` (or `localStorage` for `once: "forever"`), and only when a question is set. This site's own creature uses this feature for its question about the extension.
 
 ## Creatures
 
@@ -265,9 +299,9 @@ Machine-readable: [`llms.txt`](llms.txt), [`llms-full.txt`](llms-full.txt), [`sc
 
 | | |
 |---|---|
-| Size | `perch.js` 27 kB, 10 kB gzipped, with all six creatures. `perch-tuner.js` 24 kB, 9 kB gzipped, development only |
+| Size | `perch.js` 27 kB, 13 kB gzipped, with all six creatures. `perch-tuner.js` 31 kB, 11 kB gzipped, development only |
 | Requests | None. The one exception is a fetch of your own `creatureUrl` file, if you set it |
-| Tracking | None. No cookies. It writes to browser storage only for `?perch=tune` (`sessionStorage`) and, in the tuner on localhost, your unsaved creature edits (`localStorage`) |
+| Tracking | None. No cookies. It writes to browser storage only for `?perch=tune` (`sessionStorage`), for "already seen" flags of a question you set (`sessionStorage` or `localStorage`), and, in the tuner on localhost, your unsaved creature edits (`localStorage`) |
 | CPU | One canvas, redrawn only when the pose changes. About 60 updates per second at most. Stops in background tabs |
 | Layout | `position: fixed`, so no layout shift. Never blocks clicks |
 | Reduced motion | With `prefers-reduced-motion`, it sits still next to the goal |

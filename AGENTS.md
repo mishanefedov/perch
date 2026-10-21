@@ -37,6 +37,7 @@ Rules:
 
 - `schema.json` is the source of truth for option names, types and limits. The CLI reads it. Keep `src/config.ts` in step (a test checks the creature list).
 - The runtime must stay dependency-free and make no network calls. The tuner stays out of `perch.js`: it is its own bundle, loaded only in development.
+- The creature stands still while a question (`ask`) is up and the question closes on scroll: keep both rules when changing the engine or `src/ask.ts`.
 - Do not edit the page's markup from the runtime. The creature layer is one fixed canvas.
 - Every CLI change needs a case in `test/cli.test.mjs` or `test/commands.test.mjs`. Every behaviour change in the engine or tuner needs a check in `test/browser.test.mjs`.
 - A new creature: copy `src/creatures/blob.ts`, register it in `src/config.ts`, add it to `schema.json`, run the tests (they check row widths, eye and arm placement), then `bun run assets`.

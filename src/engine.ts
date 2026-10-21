@@ -1,4 +1,6 @@
 import type { ResolvedOptions } from "./config";
+import { normalizeAsk as normalizeAskInput } from "./ask";
+import { createAsk, type AskOptions } from "./ask";
 import type { CreatureSpec } from "./creature";
 import { draw, type ArmName, type Face, type Pose } from "./creature";
 import { PRESS, ROOT_ATTR, Scanner, type Plat } from "./scanner";
@@ -15,6 +17,10 @@ export interface Handle {
   debug(on: boolean): void;
   /** swaps the drawing without restarting. Returns false when the new creature has another size */
   setCreature(spec: CreatureSpec): boolean;
+  /** change the question without restarting the creature */
+  setAsk(ask: AskOptions | null): void;
+  /** show the question now, whatever the visitor has seen */
+  previewAsk(): void;
 }
 
 type Mode = "fall" | "idle" | "walk" | "jump" | "drag" | "party";
@@ -32,6 +38,7 @@ export function start(cfg: ResolvedOptions): Handle {
   // ---------- DOM: one fixed layer that never blocks the page ----------
   const root = document.createElement("div");
   root.setAttribute(ROOT_ATTR, "");
+  root.setAttribute("data-perch-creature", ""); // the creature itself (the tuner and the question bubble have their own hosts)
   root.setAttribute("aria-hidden", "true");
   root.style.cssText = `position:fixed;left:0;top:0;z-index:${cfg.zIndex};pointer-events:none;transform:translate(-200px,-200px);will-change:transform;contain:layout style;`;
   const canvas = document.createElement("canvas");
@@ -78,6 +85,14 @@ export function start(cfg: ResolvedOptions): Handle {
   listen("resize", queueRefresh);
   cleanups.push(() => { clearInterval(timer); clearTimeout(refreshQueued); mo.disconnect(); root.remove(); });
 
+  // ---------- the question bubble: while it is up the creature stands still ----------
+  let paused = false;
+  let creatureReady = () => true; // set once the creature exists; the reduced-motion creature is always ready
+  const askCtl = createAsk({ anchor: () => root.getBoundingClientRect(), zIndex: cfg.zIndex + 1, onVisible: (v) => { paused = v; }, ready: () => creatureReady() });
+  askCtl.set(cfg.ask);
+  cleanups.push(() => askCtl.destroy());
+  const askApi = { setAsk: (a: AskOptions | null) => askCtl.set(normalizeAskInput(a)), previewAsk: () => askCtl.show(true) };
+
   // ---------- reduced motion: sit still on the nearest call to action ----------
   if (reduced) {
     let raf = 0;
@@ -92,7 +107,7 @@ export function start(cfg: ResolvedOptions): Handle {
     listen("scroll", sched, { passive: true });
     listen("resize", sched);
     canvas.style.pointerEvents = "none";
-    return { destroy: () => cleanups.forEach((c) => c()), celebrate: () => {}, debug: () => {}, setCreature: () => false };
+    return { destroy: () => cleanups.forEach((c) => c()), celebrate: () => {}, debug: () => {}, setCreature: () => false, ...askApi };
   }
 
   // ---------- debug overlay: shows exactly which elements count as floors ----------
@@ -148,6 +163,11 @@ export function start(cfg: ResolvedOptions): Handle {
     flip: false, arm: "rest" as ArmName, armL: "rest" as ArmName, blinkAt: performance.now() + 3000,
   };
 
+  // the question waits until the creature stands on something and is on screen
+  creatureReady = () => {
+    const r = root.getBoundingClientRect();
+    return (st.mode === "idle" || st.mode === "walk") && r.top > 0 && r.bottom < innerHeight && r.left >= 0 && r.right <= innerWidth;
+  };
   const plats = () => scanner.plats(frameNo);
   const find = (el: Element | null) => (el ? plats().find((p) => p.el === el) ?? null : null);
   /** the smallest platform that contains this element */
@@ -264,9 +284,13 @@ export function start(cfg: ResolvedOptions): Handle {
     lastTick = now;
     frameNo++;
     const TOP = scanner.topLimit;
+    let pushed = false;
+    // while the question is up the creature stands still: no thinking, no physics, no squashing
+    move: {
+    if (paused) { st.scrollY = scrollY; st.scrollV = 0; break move; }
     // how fast the page is scrolling
     const sv = scrollY - st.scrollY; st.scrollY = scrollY; st.scrollV += (sv - st.scrollV) * 0.35;
-    const pushed = Math.abs(st.scrollV) > 7 && st.mode !== "drag";
+    pushed = Math.abs(st.scrollV) > 7 && st.mode !== "drag";
     if (st.mode === "drag") {
       st.sy += (1.18 - st.sy) * 0.3; st.sx += (0.86 - st.sx) * 0.3;
     } else if (!st.on && st.mode === "idle" && st.y >= innerHeight - 7) {
@@ -326,6 +350,7 @@ export function start(cfg: ResolvedOptions): Handle {
       st.svx = (st.svx + (rx - st.sx) * 0.2) * 0.74; st.svy = (st.svy + (ry - st.sy) * 0.2) * 0.74;
       st.sx += st.svx; st.sy += st.svy;
     }
+    } // end of move
 
     // eyes: follow the cursor, or the call to action when the cursor is still
     const cx = st.x, cy = st.y - H * 0.6;
@@ -371,6 +396,7 @@ export function start(cfg: ResolvedOptions): Handle {
   const down = (e: PointerEvent) => {
     if (!cfg.draggable || !(e.target as Element).closest?.("[data-perch-body]")) return;
     e.preventDefault();
+    askCtl.hide("interact"); // grabbing the creature answers the question
     st.mode = "drag"; st.on = null;
     st.drag = { dx: st.x - e.clientX, dy: st.y - e.clientY, lx: e.clientX, ly: e.clientY, t: performance.now(), vx: 0, vy: 0 };
   };
@@ -433,5 +459,5 @@ export function start(cfg: ResolvedOptions): Handle {
     render(pose);
     return true;
   };
-  return { destroy: () => cleanups.forEach((c) => c()), celebrate, debug: setDebug, setCreature };
+  return { destroy: () => cleanups.forEach((c) => c()), celebrate, debug: setDebug, setCreature, ...askApi };
 }

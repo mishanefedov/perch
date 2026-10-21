@@ -42,6 +42,7 @@ mobile       default true. false turns it off on phones and touch screens.
 draggable    default true.
 bounce       default true. Elements dip a few pixels when it lands.
 zIndex       default 9999.
+ask          the creature asks a question in a speech bubble. JSON: {"text","buttons":[{"label","action","value","newTab"}],"delay","once","id"}. At most 3 buttons. action: link (URL, http/https/mailto/tel/relative only), copy (text), scroll (CSS selector), click (CSS selector), event (window event name), close. While it is up the creature stands still, and scrolling closes it. As an attribute: data-ask='{"text":"Want a demo?","buttons":[{"label":"Yes","action":"link","value":"/demo"}]}'. Command: npx perch-pet set ask='<json>' ; npx perch-pet set ask= removes it.
 tuner        script tag only. true or false forces the localhost panel on or off.
 
 Options are written as data-* attributes on the script tag (data-top-offset for topOffset), for example:

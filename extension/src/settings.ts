@@ -30,7 +30,7 @@ export async function save(partial: Partial<Settings>): Promise<void> {
 }
 
 /** What only applies to one site: the call to action, things to ignore, space for a fixed header. */
-export interface SiteRule { goal?: string; ignore?: string; topOffset?: number }
+export interface SiteRule { goal?: string; ignore?: string; topOffset?: number; ask?: object }
 
 export const ruleKey = (origin: string) => `rule:${origin}`;
 

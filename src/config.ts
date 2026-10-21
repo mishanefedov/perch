@@ -1,3 +1,4 @@
+import { normalizeAsk, type AskOptions, type AskResolved } from "./ask";
 import type { CreatureSpec } from "./creature";
 import { alien } from "./creatures/alien";
 import { blob } from "./creatures/blob";
@@ -32,6 +33,8 @@ export interface PerchOptions {
   /** make the page elements dip a few px when it lands on them. Default true */
   bounce?: boolean;
   zIndex?: number;
+  /** the creature asks the visitor a question in a speech bubble: text, up to 3 buttons, what they do */
+  ask?: AskOptions;
 }
 
 export interface ResolvedOptions {
@@ -47,6 +50,7 @@ export interface ResolvedOptions {
   draggable: boolean;
   bounce: boolean;
   zIndex: number;
+  ask: AskResolved | null;
 }
 
 export const CREATURES: Record<string, CreatureSpec> = { octopus, blob, cat, ghost, robot, alien };
@@ -70,6 +74,7 @@ export function resolve(o: PerchOptions = {}): ResolvedOptions {
     draggable: o.draggable ?? true,
     bounce: o.bounce ?? true,
     zIndex: o.zIndex ?? 9999,
+    ask: normalizeAsk(o.ask),
   };
 }
 
@@ -78,6 +83,7 @@ export function resolve(o: PerchOptions = {}): ResolvedOptions {
 export function fromScript(el: HTMLScriptElement | null): PerchOptions & { auto: boolean } {
   const d = el?.dataset ?? {};
   const num = (v: string | undefined) => (v === undefined || v === "" || isNaN(Number(v)) ? undefined : Number(v));
+  const json = (v: string | undefined): unknown => { if (!v) return undefined; try { return JSON.parse(v); } catch { console.warn("perch: data-ask is not valid JSON"); return undefined; } };
   const bool = (v: string | undefined) => (v === undefined ? undefined : v !== "false" && v !== "0");
   return {
     auto: d.auto !== "false",
@@ -94,5 +100,6 @@ export function fromScript(el: HTMLScriptElement | null): PerchOptions & { auto:
     draggable: bool(d.draggable),
     bounce: bool(d.bounce),
     zIndex: num(d.zIndex),
+    ask: json(d.ask) as AskOptions | undefined,
   };
 }
