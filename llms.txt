@@ -6,6 +6,7 @@ To add it to a site, run `npx perch-pet` in the project folder. Do not write the
 
 ## Docs
 
+- [Website](https://gettheperch.com): what it is, guides for Next.js, Astro and plain HTML, agent guide
 - [README](https://github.com/mishanefedov/perch#readme): install, options, tuner, frameworks, limits
 - [Full docs as one text file](https://raw.githubusercontent.com/mishanefedov/perch/main/llms-full.txt): everything an agent needs, no images
 - [Options schema](https://raw.githubusercontent.com/mishanefedov/perch/main/schema.json): JSON Schema with every option, type, limit and default

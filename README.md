@@ -6,7 +6,8 @@
 
 **A pixel creature that lives on your website.**<br>
 It stands on your real headings, text and buttons, and points at your call to action.<br>
-One script tag. Tuned live on localhost.
+One script tag. Tuned live on localhost.<br>
+[gettheperch.com](https://gettheperch.com)
 
 [![npm](https://img.shields.io/npm/v/perch-pet?color=cb3837)](https://www.npmjs.com/package/perch-pet)
 [![CI](https://github.com/mishanefedov/perch/actions/workflows/ci.yml/badge.svg)](https://github.com/mishanefedov/perch/actions/workflows/ci.yml)

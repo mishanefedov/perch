@@ -25,27 +25,56 @@
     "cli",
     "agent-friendly"
   ],
-  "homepage": "https://github.com/mishanefedov/perch#readme",
+  "homepage": "https://gettheperch.com",
   "bugs": "https://github.com/mishanefedov/perch/issues",
-  "repository": { "type": "git", "url": "git+https://github.com/mishanefedov/perch.git" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mishanefedov/perch.git"
+  },
   "license": "MIT",
   "author": "Michael Nefedov (https://github.com/mishanefedov)",
   "type": "module",
-  "bin": { "perch-pet": "cli/perch-pet.mjs" },
+  "bin": {
+    "perch-pet": "cli/perch-pet.mjs"
+  },
   "main": "./dist/esm/index.js",
   "module": "./dist/esm/index.js",
   "types": "./dist/types/index.d.ts",
   "exports": {
-    ".": { "types": "./dist/types/index.d.ts", "import": "./dist/esm/index.js", "default": "./dist/esm/index.js" },
-    "./auto": { "types": "./dist/types/auto.d.ts", "import": "./dist/esm/auto.js", "default": "./dist/esm/auto.js" },
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/esm/index.js",
+      "default": "./dist/esm/index.js"
+    },
+    "./auto": {
+      "types": "./dist/types/auto.d.ts",
+      "import": "./dist/esm/auto.js",
+      "default": "./dist/esm/auto.js"
+    },
     "./perch.js": "./dist/perch.js",
     "./perch-tuner.js": "./dist/perch-tuner.js",
     "./schema.json": "./schema.json",
     "./package.json": "./package.json"
   },
-  "sideEffects": ["./dist/esm/auto.js", "./dist/perch.js", "./dist/perch-tuner.js"],
-  "files": ["dist", "cli", "schema.json", "llms.txt", "llms-full.txt", "AGENTS.md", "README.md", "LICENSE", "CHANGELOG.md"],
-  "engines": { "node": ">=18" },
+  "sideEffects": [
+    "./dist/esm/auto.js",
+    "./dist/perch.js",
+    "./dist/perch-tuner.js"
+  ],
+  "files": [
+    "dist",
+    "cli",
+    "schema.json",
+    "llms.txt",
+    "llms-full.txt",
+    "AGENTS.md",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "build": "bun run scripts/build.ts",
     "typecheck": "tsc --noEmit",
