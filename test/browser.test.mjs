@@ -14,7 +14,9 @@ const chrome = ["/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", 
 test("creature stands on real elements and stays out of trouble", { skip: !chrome || !existsSync(join(root, "dist/perch.js")) }, async () => {
   const server = createServer((req, res) => {
     if (req.url === "/favicon.ico") { res.statusCode = 204; return res.end(); }
-    const p = req.url === "/" ? "/demo/index.html" : req.url.split("?")[0];
+    let p = req.url === "/" ? "/test/fixtures/acme.html" : req.url.split("?")[0];
+    if (p.startsWith("/fixtures/")) p = "/test" + p;
+    if (p === "/perch.js" || p === "/perch-tuner.js") p = "/dist" + p;
     try { res.setHeader("content-type", types[extname(p)] ?? "text/plain"); res.end(readFileSync(join(root, p))); } catch { res.statusCode = 404; res.end(); }
   }).listen(0);
   const port = server.address().port;
@@ -70,7 +72,9 @@ test("creature stands on real elements and stays out of trouble", { skip: !chrom
 test("tuner: swap creature, paint a pixel, pick an element, copy the command", { skip: !chrome || !existsSync(join(root, "dist/perch-tuner.js")) }, async () => {
   const server = createServer((req, res) => {
     if (req.url === "/favicon.ico") { res.statusCode = 204; return res.end(); }
-    const p = req.url === "/" ? "/demo/index.html" : req.url.split("?")[0];
+    let p = req.url === "/" ? "/test/fixtures/acme.html" : req.url.split("?")[0];
+    if (p.startsWith("/fixtures/")) p = "/test" + p;
+    if (p === "/perch.js" || p === "/perch-tuner.js") p = "/dist" + p;
     try { res.setHeader("content-type", types[extname(p)] ?? "text/plain"); res.end(readFileSync(join(root, p))); } catch { res.statusCode = 404; res.end(); }
   }).listen(0);
   const browser = await chromium.launch({ executablePath: chrome });
@@ -118,12 +122,71 @@ test("tuner: swap creature, paint a pixel, pick an element, copy the command", {
     const hits = await page.evaluate((sel) => [...document.querySelectorAll(sel)].map((el) => el.type), goal);
     assert.deepEqual(hits, ["submit"], `selector "${goal}" matches only the submit button`);
 
-    // selector helper on a few elements
-    const sels = await page.evaluate(() => [...document.querySelectorAll("h1, .card h3, input, a.btn")].map((el) => [window.PerchTuner.selectorFor(el), el]).map(([s, el]) => [s, [...document.querySelectorAll(s)].includes(el)]));
-    for (const [s, ok] of sels) assert.ok(ok, `selector ${s} matches its element`);
+    // the selector must match exactly its element, also for repeated siblings (three cards, three paragraphs)
+    const sels = await page.evaluate(() => [...document.querySelectorAll("h1, .card, .card h3, .card p, input, a.btn, main p")].map((el) => { const s = window.PerchTuner.selectorFor(el); const hits = [...document.querySelectorAll(s)]; return [s, hits.length === 1 && hits[0] === el]; }));
+    assert.ok(sels.length >= 12);
+    for (const [s, ok] of sels) assert.ok(ok, `selector ${s} matches exactly its element`);
 
     // the tuner is off for a live site
     assert.equal(await page.evaluate(async () => (await import("/dist/esm/index.js")).tunerWanted("false")), false);
+    assert.deepEqual(errors, []);
+  } finally {
+    await browser.close();
+    server.close();
+  }
+});
+
+test("tuner: pick a goal and an ignored card with the mouse, the creature goes to the goal", { skip: !chrome || !existsSync(join(root, "dist/perch-tuner.js")) }, async () => {
+  const server = createServer((req, res) => {
+    if (req.url === "/favicon.ico") { res.statusCode = 204; return res.end(); }
+    let p = req.url.split("?")[0];
+    if (p.startsWith("/fixtures/")) p = "/test" + p;
+    if (p === "/perch.js" || p === "/perch-tuner.js") p = "/dist" + p;
+    try { res.setHeader("content-type", types[extname(p)] ?? "text/plain"); res.end(readFileSync(join(root, p))); } catch { res.statusCode = 404; res.end(); }
+  }).listen(0);
+  const browser = await chromium.launch({ executablePath: chrome });
+  const page = await browser.newPage({ viewport: { width: 1000, height: 700 } });
+  const errors = [];
+  page.on("pageerror", (e) => errors.push(String(e)));
+  page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
+  try {
+    await page.goto(`http://localhost:${server.address().port}/fixtures/hero.html`);
+    await page.waitForSelector("[data-perch-tuner]", { state: "attached" });
+    const t = (s) => page.locator(`[data-perch-tuner] ${s}`);
+    const center = async (sel) => { const b = await page.locator(sel).first().boundingBox(); return [b.x + b.width / 2, b.y + b.height / 2]; };
+    const feetOn = (sel) => page.evaluate((s) => {
+      const r = document.querySelector("[data-perch-root]:not([data-perch-tuner])").getBoundingClientRect();
+      const feet = r.top + 48, x = r.left + r.width / 2, b = document.querySelector(s).getBoundingClientRect();
+      return Math.abs(feet - b.top) < 16 && x > b.left - 10 && x < b.right + 10;
+    }, sel);
+    await page.waitForTimeout(2500);
+
+    // goal: hover, click "Book a demo"
+    await t(".gear").click();
+    await t("[data-pick=goal]").click();
+    const [gx, gy] = await center("a.btn");
+    await page.mouse.move(gx, gy, { steps: 8 });
+    await page.mouse.click(gx, gy);
+    assert.equal(await t("#goal").inputValue(), "a.btn");
+    assert.equal((await t("[data-match=goal]").textContent()).trim(), "matches 1 element");
+    await page.waitForTimeout(5000);
+    assert.ok(await feetOn("a.btn"), "the creature stands on the new goal");
+
+    // ignore: hover the text in the first card, press ArrowUp, click: the whole card is picked
+    await t("[data-pick=ignore]").click();
+    const [cx, cy] = await center(".card >> nth=0 >> p");
+    await page.mouse.move(cx, cy, { steps: 8 });
+    await page.keyboard.press("ArrowUp");
+    await page.mouse.click(cx, cy);
+    const sel = await t("#ignore").inputValue();
+    const hits = await page.evaluate((s) => [...document.querySelectorAll(s)].map((e) => e.className), sel);
+    assert.deepEqual(hits, ["card"], `ignore selector "${sel}" matches exactly the first card`);
+    assert.equal(await page.evaluate((s) => document.querySelector(s) === document.querySelectorAll(".card")[0], sel), true);
+    assert.match(await t(".out").inputValue(), /set goal=a\.btn ignore=/);
+
+    // the ignored card is no floor: show floors and check no floor line sits on its text
+    await page.waitForTimeout(3500);
+    assert.ok(!(await feetOn(".card:first-child h3")) , "the creature does not stand in the ignored card");
     assert.deepEqual(errors, []);
   } finally {
     await browser.close();

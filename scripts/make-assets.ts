@@ -1,6 +1,6 @@
 // Generates the animated SVGs used in the README from the creature data.
 //   bun run assets
-import { writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { CREATURES } from "../src/config";
 import { buildGrid, type CreatureSpec, type Pose } from "../src/creature";
 
@@ -99,6 +99,20 @@ function lineup() {
   return `<svg xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="The six built-in creatures: ${names.join(", ")}"><style>${css}</style>${items.join("")}</svg>`;
 }
 
+/** the default octopus, cropped tight: used as the logo and favicon */
+function logo() {
+  const spec = CREATURES.octopus;
+  const grid = buildGrid(spec, pose(spec, { legs: 0 }));
+  let x0 = 99, x1 = -1, y0 = 99, y1 = -1;
+  grid.forEach((row, y) => row.forEach((c, x) => { if (c) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); } }));
+  const cropped = grid.slice(y0, y1 + 1).map((r) => r.slice(x0, x1 + 1));
+  const w = x1 - x0 + 1, h = y1 - y0 + 1;
+  return `<svg xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges" viewBox="0 0 ${w} ${h}" width="${w * 8}" height="${h * 8}" role="img" aria-label="Perch octopus logo">${rects(cropped, 1).replace(/height="1.6"/g, 'height="1.05"')}</svg>`;
+}
+
+mkdirSync("site/static", { recursive: true });
+writeFileSync("site/static/logo.svg", logo());
+writeFileSync("site/static/favicon.svg", logo());
 writeFileSync("assets/hero.svg", hero());
 writeFileSync("assets/creatures.svg", lineup());
 console.log("assets/hero.svg, assets/creatures.svg");

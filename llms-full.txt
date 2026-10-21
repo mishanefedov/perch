@@ -10,12 +10,15 @@ It runs in the visitor's browser. No model, no network calls (one optional fetch
 How to add it to a site (do this)
 ---------------------------------
 1. In the project folder run: npx perch-pet detect
-   Output is JSON: { framework, layoutFile, publicDir, installed, options }.
-   framework is one of: next-app, next-pages, next-pages-new, html (Astro, SvelteKit, Vite, plain HTML), nuxt, or null.
-   If framework is null the project is not supported by the command (Remix, Gatsby, WordPress, Webflow, Shopify...): copy node_modules/perch-pet/dist/perch.js to the static folder as perch.js and add <script src="/perch.js" defer></script> before </body>.
+   Output is JSON: { framework, layoutFile, publicDir, installed, options, needsChoice, candidates: [{ id, kind, label, file, publicDir, project, recommended, installed }] }.
+   It searches every root layout (any depth, so Next.js route groups like app/(site)/layout.tsx are found), Astro layouts, SvelteKit app.html, Nuxt, and HTML pages, in the current folder and, if that is not a project, in folders below it.
+   kind is one of: next-app, next-pages, next-pages-new, html (Astro, SvelteKit, Vite, plain HTML), nuxt.
+   If candidates is empty the command found nothing (Remix, Gatsby, WordPress, Webflow, Shopify...): pass your layout or page with --file <path>, or add <script src="https://unpkg.com/perch-pet@0.1/dist/perch.js" defer></script> before </body>.
 2. Preview: npx perch-pet --dry
 3. Install: npx perch-pet
-   This copies perch.js and perch-tuner.js into the public folder and adds one script tag to the layout file. Add --no-tuner to skip the tuner file.
+   One clear place is used straight away. With several equal places and no terminal it exits with code 2 and prints npx perch-pet --file "<path>" for each; pick one and rerun. Use --file more than once for several, or --yes for the recommended one. In a terminal it shows a menu (number, 1,2, or a pasted path).
+   This copies perch.js and perch-tuner.js into the public folder and adds one script tag to the layout file. Add --no-tuner to skip the tuner file. Use --public <dir> to change the folder.
+   Exit codes: 0 done, 1 nothing found, 2 needs a choice.
 4. Run the dev server and look at the page. On localhost a gear button appears at the bottom left (the tuner).
 5. Change options: npx perch-pet set stickiness=0.8 creature=cat goal=".hero a.cta"
    Values are validated against schema.json. Reset: npx perch-pet set --reset
@@ -47,6 +50,7 @@ Options are written as data-* attributes on the script tag (data-top-offset for 
 The tuner (development only)
 ----------------------------
 Shown on localhost, 127.0.0.1, *.local, *.test, *.localhost, 192.168.*, 10.*, or with ?perch=tune in the URL (?perch=off clears it). Never loaded for live visitors unless data-tuner="true".
+While picking, the arrow keys move to the parent (up) or back (down); the bar shows the selector and how many elements it matches.
 Features: swap creature, pixel editor (body, two leg frames, five arm poses, palette, eye colours, eye position, undo), "Show floors" overlay (blue lines are floors, green boxes are goals), "Pick" buttons that write a CSS selector for the element you click, sliders and toggles, and a save command such as: npx perch-pet set creature=cat stickiness=0.8
 For a drawn creature: Download JSON, then npx perch-pet creature ./creature.json
 

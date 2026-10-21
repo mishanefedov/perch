@@ -144,7 +144,7 @@ export function start(cfg: ResolvedOptions): Handle {
     walkTo: 0, next: performance.now() + 1200, step: 0, legs: 0 as 0 | 1, party: 0,
     mouse: { x: innerWidth / 2, y: innerHeight / 2 }, drag: { dx: 0, dy: 0, lx: 0, ly: 0, t: 0, vx: 0, vy: 0 },
     scrollY: scrollY, scrollV: 0, idleAct: "", actUntil: 0, look: null as null | { x: number; y: number },
-    happy: false, reading: false, taps: 0, lastMove: performance.now(), atGoalSince: 0, interestAt: 0,
+    wantGoal: true, happy: false, reading: false, taps: 0, lastMove: performance.now(), atGoalSince: 0, interestAt: 0,
     flip: false, arm: "rest" as ArmName, armL: "rest" as ArmName, blinkAt: performance.now() + 3000,
   };
 
@@ -211,6 +211,9 @@ export function start(cfg: ResolvedOptions): Handle {
     const here = ps.find((p) => p.el === st.on) ?? null;
     const goal = ps.filter((p) => p.goal).sort((a, b) => Math.abs(a.top - innerHeight * 0.55) - Math.abs(b.top - innerHeight * 0.55))[0];
     st.arm = "rest"; st.armL = "rest";
+    // the first thing it does after (re)starting is walk to the call to action, so a new goal is visible at once
+    if (st.wantGoal && goal && !here?.goal) { st.wantGoal = false; const s = goalSpot(goal); return jumpTo(s.x, goal.top, goal.el); }
+    if (here?.goal) st.wantGoal = false;
     if (st.taps > 0 && here) {
       // tap the button it is sitting on
       st.taps--; st.arm = "hold";
