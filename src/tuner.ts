@@ -49,6 +49,7 @@ button.on { background: #dbeafe; border-color: #3b82f6; }
 .out { width: 100%; height: 64px; resize: vertical; padding: 7px; border: 1px solid #ccc; border-radius: 6px; font: 12px/1.4 ui-monospace, Menlo, monospace; background: #fafafa; color: #111; }
 .btns { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .hint { color: #666; font-size: 12px; margin: 8px 0 0; }
+.hint a { color: inherit; }
 .sep { height: 1px; background: #0001; margin: 12px 0; }
 .pick { position: fixed; inset: 0; cursor: crosshair; z-index: 1; }
 .box { position: fixed; pointer-events: none; border: 2px solid #f59e0b; background: #f59e0b22; border-radius: 3px; z-index: 2; }
@@ -152,6 +153,7 @@ export function mountTuner(api: PerchApi, hooks: TunerHooks = {}): () => void {
       <button class="b" data-reset>Reset</button>
     </div>
     <p class="hint">Run the command in your project folder to save these values. Floors are blue, the goal is green. On a live site this panel is off unless data-tuner is set.</p>
+    <p class="hint">Do you like it? <a class="starlink" href="https://github.com/mishanefedov/perch" target="_blank" rel="noopener">Star it on GitHub</a></p>
     </div>
   </section>`;
 

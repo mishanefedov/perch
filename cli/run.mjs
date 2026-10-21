@@ -555,5 +555,6 @@ export async function run(argv, cwd, out = console.log, io = defaultIo()) {
     if (o.dry && !p.already) out("\n" + p.after.split("\n").filter((l) => l.includes("perch")).join("\n"));
   }
   if (!o.dry) out("\nDone. Run your dev server: a gear button appears bottom-left on localhost to tune it. To undo: npx perch-pet --remove");
+  if (!o.dry) out("\nDo you like it? Star it: github.com/mishanefedov/perch");
   return 0;
 }

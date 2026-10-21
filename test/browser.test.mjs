@@ -90,6 +90,7 @@ test("tuner: swap creature, paint a pixel, pick an element, copy the command", {
 
     // swap persona
     await t(".gear").click();
+    assert.equal(await t(".starlink").getAttribute("href"), "https://github.com/mishanefedov/perch", "the panel asks for a star");
     await t("#creature").selectOption("robot");
     assert.equal(await spec(), "robot");
     assert.equal(await t(".out").inputValue(), "npx perch-pet set creature=robot");
