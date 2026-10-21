@@ -338,6 +338,8 @@ Machine-readable: [`llms.txt`](llms.txt), [`llms-full.txt`](llms-full.txt), [`sc
 
 Issues and pull requests are welcome: [CONTRIBUTING.md](CONTRIBUTING.md). `bun run demo` builds the landing page and opens it, with the tuner on. A new creature is a good first PR.
 
+If Perch saves you time, a star on GitHub helps other people find it.
+
 ## License
 
 MIT. Made by [Michael Nefedov](https://github.com/mishanefedov).
