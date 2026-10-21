@@ -40,11 +40,52 @@ const FLAG_VALUES = { creature: "creature", stickiness: "stickiness", speed: "sp
 const FLAG_FALSE = { "--no-mobile": "mobile", "--no-drag": "draggable", "--no-bounce": "bounce" };
 const kebab = (k) => k.replace(/[A-Z]/g, (c) => "-" + c.toLowerCase());
 
+const ASK_ACTIONS = ["link", "copy", "scroll", "click", "event", "close"];
+/** The same rules as validateAsk in src/ask.ts (a test keeps them in step). Returns the problems, or []. */
+export function askProblems(a) {
+  const errs = [];
+  if (!a || typeof a !== "object" || Array.isArray(a)) return ["ask must be a JSON object like {\"text\":\"...\",\"buttons\":[...]}"];
+  if (typeof a.text !== "string" || !a.text.trim()) errs.push("text is required");
+  else if (a.text.length > 200) errs.push("text is longer than 200 characters");
+  if (a.delay !== undefined && (typeof a.delay !== "number" || a.delay < 0 || a.delay > 60)) errs.push("delay must be a number from 0 to 60");
+  if (a.once !== undefined && !["session", "forever", "always"].includes(a.once)) errs.push('once must be "session", "forever" or "always"');
+  if (a.id !== undefined && typeof a.id !== "string") errs.push("id must be a string");
+  if (a.buttons !== undefined) {
+    if (!Array.isArray(a.buttons)) errs.push("buttons must be a list");
+    else {
+      if (a.buttons.length > 3) errs.push("at most 3 buttons");
+      a.buttons.forEach((b, i) => {
+        const n = `button ${i + 1}`;
+        if (!b || typeof b !== "object") { errs.push(`${n} must be an object`); return; }
+        if (typeof b.label !== "string" || !b.label.trim()) errs.push(`${n}: label is required`);
+        else if (b.label.length > 40) errs.push(`${n}: label is longer than 40 characters`);
+        const action = b.action ?? (b.value ? "link" : "close");
+        if (!ASK_ACTIONS.includes(action)) { errs.push(`${n}: action must be one of ${ASK_ACTIONS.join(", ")}`); return; }
+        if (action !== "close" && (typeof b.value !== "string" || !b.value.trim())) errs.push(`${n}: ${action} needs a value`);
+        else if (typeof b.value === "string" && b.value.length > 500) errs.push(`${n}: value is longer than 500 characters`);
+        else if (action === "link" && typeof b.value === "string") {
+          let ok = false;
+          try { ok = ["http:", "https:", "mailto:", "tel:"].includes(new URL(b.value, "https://example.com/").protocol); } catch { /* not a URL */ }
+          if (!ok) errs.push(`${n}: link must be an http(s), mailto or tel URL, or a relative path`);
+        }
+      });
+    }
+  }
+  return errs;
+}
+
 /** Checks one option against schema.json and returns the string to store. */
 export function checkOption(key, raw) {
   const def = SCHEMA.properties[key];
   if (!def) throw new Error(`unknown option "${key}". Known: ${Object.keys(SCHEMA.properties).join(", ")}`);
   const v = String(raw);
+  if (def.type === "object") {
+    let parsed;
+    try { parsed = JSON.parse(v); } catch { throw new Error(`${key} must be valid JSON, for example ask='{"text":"Want a demo?","buttons":[{"label":"Yes","action":"link","value":"/demo"}]}'`); }
+    const problems = key === "ask" ? askProblems(parsed) : [];
+    if (problems.length) throw new Error(`${key} is not valid:\n- ` + problems.join("\n- "));
+    return JSON.stringify(parsed);
+  }
   if (def.type === "boolean") {
     if (!["true", "false", "1", "0"].includes(v)) throw new Error(`${key} must be true or false`);
     return v === "1" ? "true" : v === "0" ? "false" : v;
@@ -88,7 +129,8 @@ export function parseArgs(argv) {
     else if (o.cmd === "set" && a.includes("=")) {
       const at = a.indexOf("=");
       const key = a.slice(0, at);
-      o.set[key] = checkOption(key, a.slice(at + 1));
+      const value = a.slice(at + 1);
+      o.set[key] = value === "" ? null : checkOption(key, value); // `key=` removes the option
     } else if (o.cmd === "creature" && !o.creatureFile) o.creatureFile = a;
     else if (o.cmd === "set") throw new Error(`expected key=value, got "${a}"`);
     else o.dir = a;

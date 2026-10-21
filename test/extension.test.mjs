@@ -43,10 +43,10 @@ test("extension: inject, isolate, settings, popup, always on this site, blocked 
     const page = await ctx.newPage(); watch(page);
     await page.goto(`http://localhost:${port}/`);
     const tabId = await sw.evaluate(async (u) => (await chrome.tabs.query({ url: u + "*" }))[0].id, `http://localhost:${port}/`);
-    const creatures = () => page.evaluate(() => document.querySelectorAll("[data-perch-root]:not([data-perch-tuner])").length);
+    const creatures = () => page.evaluate(() => document.querySelectorAll("[data-perch-creature]").length);
     const which = async () => {
       const px = await page.evaluate(() => {
-        const c = document.querySelector("[data-perch-root]:not([data-perch-tuner]) canvas"); if (!c) return null;
+        const c = document.querySelector("[data-perch-creature] canvas"); if (!c) return null;
         const d = c.getContext("2d").getImageData(0, 0, c.width, c.height).data; let r = 0, g = 0, b = 0, n = 0;
         for (let i = 0; i < d.length; i += 4) if (d[i + 3] > 200) { r += d[i]; g += d[i + 1]; b += d[i + 2]; n++; }
         return n ? [r / n, g / n, b / n] : null;
@@ -155,7 +155,7 @@ test("extension: inject, isolate, settings, popup, always on this site, blocked 
     const sites = await sw.evaluate(async () => (await chrome.storage.sync.get("sites")).sites);
     assert.deepEqual(sites, [`http://localhost:${port}`]);
     await page.reload();
-    await page.waitForSelector("[data-perch-root]:not([data-perch-tuner])", { state: "attached", timeout: 8000 });
+    await page.waitForSelector("[data-perch-creature]", { state: "attached", timeout: 8000 });
     assert.equal(await creatures(), 1, "registered content script ran on reload without any click");
     await popup.locator("#site").uncheck();
     await settle(600);

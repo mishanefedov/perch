@@ -80,7 +80,7 @@ No account or login is needed. After installing, open any normal web page (for e
 
 **6. Distribution.** Visibility: Public. Regions: all. Submit for review. Reviews can take hours to several days, and broad host permissions slow them down, which is why the default is `activeTab`.
 
-**7. When it is approved (about two minutes of work).** Copy the listing URL into `site/config.json` under `extension.chromeStoreUrl`, then `vercel deploy --prod`. Every "Get the extension" button on gettheperch.com becomes "Add to Chrome" and links to the store. Add the store badge to the README.
+**7. When it is approved (about two minutes of work).** Copy the listing URL into `site/config.json` under `extension.chromeStoreUrl`, then `vercel deploy --prod`. Until that URL is set, the site does not promote the extension at all (no home page section, no nav link, no speech bubble; the `/extension/` page says it is coming and is not indexed). Once it is set, all of that appears, with "Add to Chrome" linking to the store. Add the store badge to the README.
 
 **Also publish to Microsoft Edge Add-ons.** The same zip works unchanged. The dev account at https://partner.microsoft.com/dashboard/microsoftedge is free. It gives Edge users a one-click link too.
 

@@ -59,7 +59,7 @@ test("creature stands on real elements and stays out of trouble", { skip: !chrom
     await btn.click({ timeout: 3000 });
 
     // the page was not modified beyond the one layer
-    const extra = await page.evaluate(() => document.querySelectorAll("[data-perch-root]:not([data-perch-tuner])").length);
+    const extra = await page.evaluate(() => document.querySelectorAll("[data-perch-creature]").length);
     assert.equal(extra, 1);
     assert.deepEqual(errors, []);
     console.log("standing on:", a.on, "| after scroll:", b.on);
@@ -155,7 +155,7 @@ test("tuner: pick a goal and an ignored card with the mouse, the creature goes t
     const t = (s) => page.locator(`[data-perch-tuner] ${s}`);
     const center = async (sel) => { const b = await page.locator(sel).first().boundingBox(); return [b.x + b.width / 2, b.y + b.height / 2]; };
     const feetOn = (sel) => page.evaluate((s) => {
-      const r = document.querySelector("[data-perch-root]:not([data-perch-tuner])").getBoundingClientRect();
+      const r = document.querySelector("[data-perch-creature]").getBoundingClientRect();
       const feet = r.top + 48, x = r.left + r.width / 2, b = document.querySelector(s).getBoundingClientRect();
       return Math.abs(feet - b.top) < 16 && x > b.left - 10 && x < b.right + 10;
     }, sel);
@@ -231,6 +231,169 @@ test("tuner stays off on a real host, and turns on only with data-tuner, ?perch=
     await page.evaluate(() => window.dispatchEvent(new Event("perch:tuner")));
     assert.equal(await page.locator("[data-perch-tuner] .panel").isVisible(), true);
     await page.close();
+  } finally {
+    await browser.close();
+    server.close();
+  }
+});
+
+test("ask: bubble shows, creature stands still, scrolling dismisses it, every button action works, unsafe links are refused", { skip: !chrome || !existsSync(join(root, "dist/perch.js")) }, async () => {
+  const server = createServer((req, res) => {
+    if (req.url === "/favicon.ico") { res.statusCode = 204; return res.end(); }
+    let p = req.url.split("?")[0];
+    if (p === "/") p = "/test/fixtures/acme.html";
+    if (p === "/perch.js" || p === "/perch-tuner.js") p = "/dist" + p;
+    try { res.setHeader("content-type", types[extname(p)] ?? "text/html"); res.end(readFileSync(join(root, p))); } catch { res.statusCode = 404; res.end(); }
+  }).listen(0);
+  const browser = await chromium.launch({ executablePath: chrome });
+  const ctx = await browser.newContext({ viewport: { width: 1100, height: 700 }, permissions: ["clipboard-read", "clipboard-write"] });
+  const page = await ctx.newPage();
+  const errors = [];
+  page.on("pageerror", (e) => errors.push(String(e)));
+  page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
+  try {
+    await page.goto(`http://localhost:${server.address().port}/`);
+    await page.waitForSelector("[data-perch-root]", { state: "attached" });
+    await page.evaluate(() => {
+      window.__clicks = 0; window.__evt = null;
+      const b = document.createElement("button"); b.id = "probe"; b.textContent = "probe"; b.onclick = () => { window.__clicks++; }; document.body.appendChild(b);
+      addEventListener("open-chat", (e) => { window.__evt = e.detail.label; });
+    });
+    const bubble = page.locator("[data-perch-root] .bubble");
+    const on = () => bubble.evaluate((el) => el.classList.contains("on")).catch(() => false);
+    const shown = () => page.waitForFunction(() => document.querySelector("[data-perch-root]:not([data-perch-creature]):not([data-perch-tuner])")?.shadowRoot?.querySelector(".bubble.on"), null, { timeout: 12000 });
+    const creaturePos = () => page.evaluate(() => document.querySelector("[data-perch-creature] div, [data-perch-creature]").style.transform);
+    const ask = (a) => page.evaluate((a) => window.Perch.init({ ask: a }), a);
+    const wait = (ms) => page.waitForTimeout(ms);
+
+    // 1. it shows after the delay, and the creature stands still while it is up
+    await ask({ text: "Want a demo?", delay: 1, once: "always", buttons: [{ label: "Yes", action: "link", value: "/demo" }, { label: "Later", action: "close" }] });
+    await wait(300);
+    assert.equal(await on(), false, "not before the delay");
+    await shown();
+    assert.equal(await on(), true, "shown after the delay and once the creature is on screen");
+    assert.equal((await bubble.locator(".q").textContent()).trim(), "Want a demo?");
+    assert.equal(await bubble.locator(".b.primary").textContent(), "Yes", "the first button is the highlighted one");
+    assert.equal(await bubble.locator("a.b").getAttribute("href"), `http://localhost:${server.address().port}/demo`);
+    const before = await creaturePos();
+    await wait(2500);
+    assert.equal(await creaturePos(), before, "the creature does not move while the question is up");
+
+    // 2. scrolling dismisses it at once, and the creature is free again
+    await page.evaluate(() => scrollBy(0, 120));
+    await wait(250);
+    assert.equal(await on(), false, "gone as soon as the page scrolls");
+    await page.evaluate(() => scrollTo(0, 0));
+
+    // 3. once: session remembers it was seen; once: always does not
+    await ask({ text: "Seen once", delay: 0, once: "session", id: "t1", buttons: [{ label: "OK" }] });
+    await shown();
+    assert.equal(await on(), true);
+    await bubble.locator(".x").click();
+    assert.equal(await on(), false);
+    await ask({ text: "Seen once", delay: 0, once: "session", id: "t1", buttons: [{ label: "OK" }] });
+    await wait(900); // it must NOT show: waiting for it would hang
+    assert.equal(await on(), false, "not shown again in the same session");
+    await ask({ text: "Seen once", delay: 0, once: "always", buttons: [{ label: "OK" }] });
+    await shown();
+    assert.equal(await on(), true, "once: always shows every time");
+
+    // 4. the actions
+    await ask({ text: "copy", delay: 0, once: "always", buttons: [{ label: "Copy code", action: "copy", value: "PERCH-10" }] });
+    await shown();
+    await bubble.locator("button.b").click();
+    assert.equal(await page.evaluate(() => navigator.clipboard.readText()), "PERCH-10");
+    assert.equal(await bubble.locator("button.b").textContent(), "Copied");
+    await wait(1200);
+    assert.equal(await on(), false, "closes after copying");
+
+    await ask({ text: "click", delay: 0, once: "always", buttons: [{ label: "Do it", action: "click", value: "#probe" }] });
+    await shown();
+    await bubble.locator("button.b").click();
+    assert.equal(await page.evaluate(() => window.__clicks), 1, "clicked the element");
+    assert.equal(await on(), false);
+
+    await ask({ text: "event", delay: 0, once: "always", buttons: [{ label: "Open chat", action: "event", value: "open-chat" }] });
+    await shown();
+    await bubble.locator("button.b").click();
+    assert.equal(await page.evaluate(() => window.__evt), "Open chat", "the event reached the page");
+
+    await ask({ text: "scroll", delay: 0, once: "always", buttons: [{ label: "Down", action: "scroll", value: "#b" }] });
+    await shown();
+    await bubble.locator("button.b").click();
+    await wait(900);
+    assert.ok((await page.evaluate(() => scrollY)) > 50, "scrolled to the element");
+    await page.evaluate(() => scrollTo(0, 0));
+
+    // 5. a javascript: link is refused: it becomes a plain button that does nothing
+    await ask({ text: "bad", delay: 0, once: "always", buttons: [{ label: "Bad", action: "link", value: "javascript:window.__pwned=1" }] });
+    await shown();
+    assert.equal(await bubble.locator(".b").evaluate((el) => el.tagName), "BUTTON");
+    await bubble.locator(".b").click();
+    assert.equal(await page.evaluate(() => window.__pwned), undefined);
+
+    assert.deepEqual(errors, []);
+  } finally {
+    await browser.close();
+    server.close();
+  }
+});
+
+test("ask in the tuner: write a question and buttons, it applies live without restarting the creature, preview, saved command", { skip: !chrome || !existsSync(join(root, "dist/perch-tuner.js")) }, async () => {
+  const server = createServer((req, res) => {
+    if (req.url === "/favicon.ico") { res.statusCode = 204; return res.end(); }
+    let p = req.url.split("?")[0];
+    if (p === "/") p = "/test/fixtures/acme.html";
+    if (p === "/perch.js" || p === "/perch-tuner.js") p = "/dist" + p;
+    try { res.setHeader("content-type", types[extname(p)] ?? "text/html"); res.end(readFileSync(join(root, p))); } catch { res.statusCode = 404; res.end(); }
+  }).listen(0);
+  const browser = await chromium.launch({ executablePath: chrome });
+  const page = await browser.newPage({ viewport: { width: 1100, height: 760 } });
+  const errors = [];
+  page.on("pageerror", (e) => errors.push(String(e)));
+  page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
+  try {
+    await page.goto(`http://localhost:${server.address().port}/`);
+    await page.waitForSelector("[data-perch-tuner]", { state: "attached" });
+    const t = (s) => page.locator(`[data-perch-tuner] ${s}`);
+    await t(".gear").click();
+    await t("details.ask-sec summary").click();
+    // mark the creature element: if the creature were restarted, the mark would be gone
+    await page.evaluate(() => { document.querySelector("[data-perch-creature]").dataset.mark = "same"; });
+    await t("#ask-text").fill("Want a demo?");
+    await t("#ask-add").click();
+    await t(".abtn .al").first().fill("Book it");
+    await t(".abtn .av").first().fill("/demo");
+    await page.waitForTimeout(300);
+    const askOpt = await page.evaluate(() => window.Perch.options().ask);
+    assert.deepEqual(askOpt, { text: "Want a demo?", buttons: [{ label: "Book it", action: "link", value: "/demo" }] });
+    assert.equal(await page.evaluate(() => document.querySelector("[data-perch-creature]")?.dataset.mark), "same", "typing did not restart the creature");
+
+    // the saved command carries the question as JSON
+    const cmd = await t(".out").inputValue();
+    assert.match(cmd, /^npx perch-pet set ask='\{"text":"Want a demo\?","buttons":\[\{"label":"Book it","action":"link","value":"\/demo"\}\]\}'$/);
+
+    // an invalid link is explained and not applied
+    await t(".abtn .av").first().fill("javascript:alert(1)");
+    await page.waitForTimeout(200);
+    assert.match(await t("#ask-err").textContent(), /link must be an http/);
+    assert.equal(await page.evaluate(() => window.Perch.options().ask.buttons[0].value), "/demo", "the invalid value was not applied");
+    await t(".abtn .av").first().fill("/pricing");
+
+    // preview shows the bubble now, and the creature stands still
+    await t("#ask-preview").click();
+    const bubble = page.locator("[data-perch-root] .bubble");
+    await bubble.waitFor({ state: "visible", timeout: 3000 });
+    assert.equal(await bubble.evaluate((el) => el.classList.contains("on")), true);
+    assert.equal((await bubble.locator(".b").first().getAttribute("href")).endsWith("/pricing"), true);
+
+    // the panel closes during a preview so the creature and bubble are visible: reopen it, then remove the question
+    await t(".gear").click();
+    await t("details.ask-sec summary").isVisible().then(async (v) => { if (!v) await t(".gear").click(); });
+    await t("#ask-clear").click();
+    await page.waitForTimeout(300);
+    assert.equal(await page.evaluate(() => window.Perch.options().ask), undefined);
+    assert.deepEqual(errors, []);
   } finally {
     await browser.close();
     server.close();

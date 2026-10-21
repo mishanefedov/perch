@@ -10,7 +10,7 @@ const EXT_VERSION = (JSON.parse(readFileSync("extension/manifest.json", "utf8"))
 const vercelUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : "";
 const SITE = (process.env.SITE_URL ?? (vercelUrl || cfg.url)).replace(/\/$/, "");
 const VERSION = (JSON.parse(readFileSync("package.json", "utf8")) as { version: string }).version;
-const OUT = "site-dist";
+const OUT = process.env.SITE_OUT ?? "site-dist";
 const CDN = "https://unpkg.com/perch-pet@0.1/dist/perch.js";
 const TODAY = new Date().toISOString().slice(0, 10);
 
@@ -29,11 +29,17 @@ for (const f of ["ext-popup.png", "ext-page.png", "ext-editor.png"]) if (existsS
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 const abs = (p: string) => SITE + p;
 
-interface Page { path: string; title: string; description: string; body: string; ld?: object[]; ogType?: string; noperch?: boolean }
+interface Page { path: string; title: string; description: string; body: string; ld?: object[]; ogType?: string; noperch?: boolean; noask?: boolean; noindex?: boolean }
+
+// the creature on this site asks the same question the extension page answers (it uses the Ask feature of the library)
+const ASK = { text: "Want me on every website?", buttons: [{ label: "Get the extension", action: "link", value: "/extension/" }], delay: 7 };
 const pages: Page[] = [];
 
 // "Add to Chrome" once the store URL is in site/config.json, else the beta download
-const STORE = cfg.extension.chromeStoreUrl;
+// The extension is promoted only when it can really be installed: when there is a Chrome Web Store link.
+// Until then nothing on the site sends people to a download. Set it in site/config.json (extension.chromeStoreUrl).
+const STORE = process.env.EXTENSION_STORE_URL ?? cfg.extension.chromeStoreUrl;
+const LIVE = !!STORE;
 const extButton = (cls = "btn primary") => STORE
   ? `<a class="${cls}" href="${STORE}" rel="noopener">Add to Chrome</a>`
   : `<a class="${cls}" href="/extension/#install">Get the extension</a>`;
@@ -52,6 +58,7 @@ function layout(p: Page): string {
 <title>${esc(p.title)}</title>
 <meta name="description" content="${esc(p.description)}">
 <link rel="canonical" href="${url}">
+${p.noindex ? '<meta name="robots" content="noindex">\n' : ""}
 <meta name="theme-color" content="#0b1020">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/icon-32.png" sizes="32x32" type="image/png">
@@ -81,8 +88,7 @@ function layout(p: Page): string {
   <a class="hide-sm" href="/nextjs/">Next.js</a>
   <a class="hide-sm" href="/astro/">Astro</a>
   <a class="hide-sm" href="/html/">HTML &amp; no-code</a>
-  <a class="hide-sm" href="/extension/">Extension</a>
-  <a href="/agents/">For agents</a>
+${LIVE ? '  <a class="hide-sm" href="/extension/">Extension</a>\n' : ""}  <a href="/agents/">For agents</a>
   <a class="gh" href="${cfg.github}">GitHub</a>
 </header>
 </div>
@@ -95,15 +101,14 @@ ${p.body}
   <span><strong>perch</strong> v${VERSION} · MIT · by <a href="https://github.com/mishanefedov">Michael Nefedov</a></span>
   <a href="${cfg.github}">GitHub</a>
   <a href="${cfg.npm}">npm</a>
-  <a href="/extension/">Browser extension</a>
-  <a href="/agents/">For AI agents</a>
+${LIVE ? '  <a href="/extension/">Browser extension</a>\n' : ""}  <a href="/agents/">For AI agents</a>
   <a href="/llms.txt">llms.txt</a>
   <a href="/schema.json">schema.json</a>
   <a href="${cfg.github}/issues">Report a problem</a>
 </div>
 </div>
 </footer>
-${p.noperch ? "" : `<script src="/perch.js" data-goal="#install" data-stickiness="0.6" data-tuner="true" defer></script>`}
+${p.noperch ? "" : `<script src="/perch.js" data-goal="#install" data-stickiness="0.6" data-tuner="true"${p.noask || !LIVE ? "" : ` data-ask="${esc(JSON.stringify(ASK))}"`} defer></script>`}
 <script src="/site.js" defer></script>
 </body>
 </html>
@@ -120,11 +125,12 @@ const FAQ: [string, string][] = [
   ["What is Perch?", "Perch is a free, open-source pixel creature for websites. One script makes a small animated mascot that stands on your real headings, text and buttons, rides them while visitors scroll, and points at your call to action."],
   ["How do I add a mascot to my website?", "Run npx perch-pet in your project folder. It finds your layout file, copies the script into your public folder and adds one script tag. Without a repo, paste one script tag before the closing body tag."],
   ["Does Perch work with Next.js, Astro, SvelteKit, Nuxt and Vite?", "Yes. The setup command edits the right file for Next.js (app and pages router, including route groups), Astro, SvelteKit, Nuxt, Vite and plain HTML. For anything else, such as WordPress, Webflow or Shopify, paste the script tag."],
-  ["Will it slow down my site?", "The script is about 27 kB, 10 kB gzipped. It draws one small canvas, pauses in background tabs, adds no layout shift and makes no network requests. The tuner panel is a separate file that only loads on localhost (and on this demo site)."],
+  ["Will it slow down my site?", "The script is about 27 kB, 13 kB gzipped. It draws one small canvas, pauses in background tabs, adds no layout shift and makes no network requests. The tuner panel is a separate file that only loads on localhost (and on this demo site)."],
   ["Does it track my visitors?", "No. There is no tracking and no analytics. The only request it can make is one optional fetch of your own creature file."],
   ["Can I make my own character?", "Yes. On localhost, the tuner has a pixel editor for the body, legs, arms, colors and eyes. Download the JSON and run npx perch-pet creature ./creature.json."],
   ["Does it work on phones?", "Yes. It uses a smaller size on touch screens and follows taps and scrolling. You can turn it off on phones with data-mobile=\"false\"."],
   ["Can an AI coding agent install it?", "Yes. The setup is a deterministic command, not a prompt. Agents run npx perch-pet detect to see what it found, then npx perch-pet, and use --file when there is more than one place to choose."],
+  ["Can the creature ask my visitors a question?", "Yes. Set a question with up to three buttons: open a link, copy a code, scroll to a section, click your chat button, or just close. The creature stands still while the question is up, and it goes away when the visitor scrolls."],
   ["Is it free?", "Yes. Perch is MIT licensed. The source is on GitHub."],
 ];
 
@@ -157,8 +163,8 @@ pages.push({
     <a class="btn primary" href="${cfg.github}">View on GitHub</a>
     <button type="button" class="btn" data-open-tuner>Open the tuner on this page</button>
   </div>
-  <p class="fine">Next.js · Astro · SvelteKit · Nuxt · Vite · plain HTML · 10 kB gzipped · no tracking</p>
-  <p class="fine" style="margin-top:6px">Or put it on any website you visit: <a href="/extension/">get the browser extension</a></p>
+  <p class="fine">Next.js · Astro · SvelteKit · Nuxt · Vite · plain HTML · 13 kB gzipped · no tracking</p>
+${LIVE ? `  <p class="fine" style="margin-top:6px">Or put it on any website you visit: <a href="/extension/">get the browser extension</a></p>` : ""}
   <div class="hero-art"><img src="/assets/hero.svg" width="960" height="300" alt="A pixel octopus hopping between a heading, text lines, a card and a button on a web page"></div>
   <div class="chips" role="group" aria-label="Try another creature on this page">Try another one on this page:
     ${["octopus", "blob", "cat", "ghost", "robot", "alien"].map((c) => `<button type="button" data-creature="${c}" aria-pressed="${c === "octopus"}">${c}</button>`).join("\n    ")}
@@ -195,7 +201,7 @@ pages.push({
     <div class="card"><span class="ico" aria-hidden="true">🎯</span><h3>Finds your call to action</h3><p>A submit button, or a button that says “sign up” or “book a demo”. Point it somewhere else with one selector.</p></div>
     <div class="card"><span class="ico" aria-hidden="true">🎛️</span><h3>Tune it live</h3><p>Stickiness, speed and size. “Show floors” draws what it found, so you see why it stands where it stands.</p></div>
     <div class="card"><span class="ico" aria-hidden="true">🎨</span><h3>Draw your own</h3><p>A pixel editor for the body, legs, arms, colors and eyes. Six creatures are built in.</p></div>
-    <div class="card"><span class="ico" aria-hidden="true">🪶</span><h3>Light and private</h3><p>10 kB gzipped. No tracking, no network calls, no layout shift. The tuner never loads for visitors.</p></div>
+    <div class="card"><span class="ico" aria-hidden="true">🪶</span><h3>Light and private</h3><p>13 kB gzipped. No tracking, no network calls, no layout shift. The tuner never loads for visitors.</p></div>
     <div class="card"><span class="ico" aria-hidden="true">♿</span><h3>Polite</h3><p>Never blocks clicks. Sits still with “reduce motion”. Hidden from screen readers. Skips popups and fixed headers.</p></div>
   </div>
 </section>
@@ -206,7 +212,7 @@ pages.push({
   <img src="/assets/creatures.svg" width="980" height="170" loading="lazy" alt="The six Perch creatures: octopus, blob, cat, ghost, robot and alien">
 </section>
 
-<section id="extension">
+${LIVE ? `<section id="extension">
   <div class="agent ext">
     <div>
       <h2>Want it on any website?</h2>
@@ -216,7 +222,7 @@ pages.push({
     </div>
     <img src="/assets/ext-page.png" loading="lazy" width="1280" height="800" alt="A web page with a pixel creature on it and the Perch customize panel open in the browser extension">
   </div>
-</section>
+</section>` : ""}
 
 <section id="agents">
   <div class="agent">
@@ -376,25 +382,27 @@ npx perch-pet --remove               # undo</pre></div>
 // ---------------------------------------------------------------- extension
 const PRIVACY = "/extension/privacy/";
 pages.push({
-  path: "/extension/", title: "Perch extension: a pixel creature on any website",
+  path: "/extension/", noask: true, noindex: !LIVE, title: LIVE ? "Perch extension: a pixel creature on any website" : "Perch browser extension: coming to the Chrome Web Store",
   description: "Free Chrome extension that puts a pixel creature on the pages you visit. It stands on real headings and buttons. Draw your own and set a goal per site.",
-  ld: [
+  ld: !LIVE ? [] : [
     breadcrumbLd("Browser extension", "/extension/"),
     { "@context": "https://schema.org", "@type": "SoftwareApplication", name: "Perch browser extension", applicationCategory: "BrowserApplication", operatingSystem: "Chrome, Chromium", softwareVersion: EXT_VERSION, url: abs("/extension/"), description: "A pixel creature that stands on the headings, text and buttons of the pages you visit.", isAccessibleForFree: true, offers: { "@type": "Offer", price: "0", priceCurrency: "USD" }, license: "https://opensource.org/licenses/MIT", author: { "@type": "Person", name: "Michael Nefedov", url: "https://github.com/mishanefedov" }, image: abs("/og.png") },
     howTo("Put a pixel creature on any website", ["Install the Perch extension.", "Click the toolbar icon and press Show on this page.", "Press Customize this page to change the creature, the goal and what to ignore."]),
   ],
   body: `<div class="wrap doc" style="max-width:860px">${crumbs(["/extension/", "Browser extension"])}
-<h1>Put a pixel creature on any website you visit</h1>
+<h1>${LIVE ? "Put a pixel creature on any website you visit" : "The Perch extension is coming to the Chrome Web Store"}</h1>
 <p>The Perch extension runs the same creature as the <a href="/">library</a> on the pages you open. It stands on the page's real headings, text and buttons, rides them while you scroll, and points at the main button. Free and open source.</p>
-<h2 id="install">Install</h2>
-${STORE ? `<p>${extButton()}</p><p class="fine" style="color:var(--muted)">Works in Chrome and other Chromium browsers (Edge, Brave, Arc).</p>` : `<div class="note">The Chrome Web Store listing is waiting for review. Until it is live, you can install the extension by hand in about a minute.</div>
+<h2 id="install">${LIVE ? "Install" : "Not in the store yet"}</h2>
+${LIVE ? `<p>${extButton("btn primary")}</p><p class="fine" style="color:var(--muted)">Works in Chrome and other Chromium browsers (Edge, Brave, Arc).</p>` : `<p>The Chrome Web Store is the only place Chrome installs extensions from, and the listing has not been published yet. Watch the repository on GitHub (Watch, then Custom, then Releases) to hear when it is.</p><p><a class="btn" href="${cfg.github}">Watch Perch on GitHub</a></p>`}
+<details id="manual"><summary>For developers: install from source</summary>
 <ol>
-<li><a class="btn primary" href="${cfg.extension.zip}" download>Download perch-extension.zip</a> (v${EXT_VERSION}) and unzip it.</li>
+<li><a href="${cfg.extension.zip}" download>Download perch-extension.zip</a> (v${EXT_VERSION}) and unzip it.</li>
 <li>Open <code>chrome://extensions</code> and switch on <strong>Developer mode</strong> (top right).</li>
 <li>Press <strong>Load unpacked</strong> and choose the unzipped folder.</li>
 <li>Pin the Perch icon from the puzzle-piece menu, open any website and click it.</li>
 </ol>
-<p class="fine" style="color:var(--muted)">Works in Chrome and other Chromium browsers (Edge, Brave, Arc). Firefox and Safari are not supported yet.</p>`}
+<p class="fine" style="color:var(--muted)">Works in Chrome and other Chromium browsers (Edge, Brave, Arc). Firefox and Safari are not supported yet. Or build it yourself from <a href="${cfg.github}/tree/main/extension">the source</a>.</p>
+</details>
 <h2>How it works</h2>
 <ol>
 <li><strong>Click the icon, press Show on this page.</strong> The creature lands on the page and goes to the main button. Press <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd> to show or hide it.</li>
@@ -422,7 +430,7 @@ ${STORE ? `<p>${extButton()}</p><p class="fine" style="color:var(--muted)">Works
 <h2>Questions</h2>
 ${[
   ["Is it free?", "Yes. It is MIT licensed, and the source is on GitHub."],
-  ["Does it slow pages down?", "The script is about 10 kB gzipped and draws one small canvas. It stops in background tabs. It only runs on pages where you turned it on."],
+  ["Does it slow pages down?", "The script is about 13 kB gzipped and draws one small canvas. It stops in background tabs. It only runs on pages where you turned it on."],
   ["Can I put it on my own website instead?", "Yes. Run npx perch-pet in your project, or paste one script tag. The extension is only for the pages you visit."],
   ["Does it work in Firefox or Safari?", "Not yet. It works in Chromium browsers such as Chrome, Edge, Brave and Arc."],
 ].map(([q, a]) => `<details><summary>${esc(q)}</summary><p>${esc(a)}</p></details>`).join("")}
@@ -430,7 +438,7 @@ ${[
 });
 
 pages.push({
-  path: PRIVACY, title: "Perch extension privacy policy",
+  path: PRIVACY, noask: true, title: "Perch extension privacy policy",
   description: "The Perch browser extension collects no data and sends nothing to any server. What it stores, where, and why it needs each permission.",
   ld: [breadcrumbLd("Privacy policy", PRIVACY)],
   body: `<div class="wrap doc">${crumbs(["/extension/", "Browser extension"], [PRIVACY, "Privacy"])}
@@ -464,9 +472,9 @@ const write = (rel: string, text: string) => { const f = join(OUT, rel); mkdirSy
 for (const p of pages) write(p.path === "/" ? "index.html" : join(p.path, "index.html"), layout(p));
 write("404.html", layout({ path: "/404.html", title: "Not found · Perch", description: "This page does not exist.", body: `<div class="wrap doc"><h1>Not found</h1><p>The octopus looked everywhere. <a href="/">Go home</a>.</p></div>`, noperch: false }).replace(`<link rel="canonical" href="${abs("/404.html")}">`, `<meta name="robots" content="noindex">`));
 
-write("sitemap.xml", `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${pages.map((p) => `  <url><loc>${abs(p.path)}</loc><lastmod>${TODAY}</lastmod></url>`).join("\n")}\n</urlset>\n`);
+write("sitemap.xml", `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${pages.filter((p) => !p.noindex).map((p) => `  <url><loc>${abs(p.path)}</loc><lastmod>${TODAY}</lastmod></url>`).join("\n")}\n</urlset>\n`);
 write("robots.txt", `User-agent: *\nAllow: /\n\n# AI crawlers and assistants are welcome\n${["GPTBot", "OAI-SearchBot", "ChatGPT-User", "ClaudeBot", "Claude-User", "Claude-SearchBot", "anthropic-ai", "PerplexityBot", "Google-Extended", "Applebot-Extended", "CCBot"].map((b) => `User-agent: ${b}\nAllow: /\n`).join("\n")}\nSitemap: ${abs("/sitemap.xml")}\n`);
-write("llms.txt", `${readFileSync("llms.txt", "utf8").trimEnd()}\n\n## Website\n\n- [Home](${abs("/")}): what it is, install, FAQ\n- [Browser extension](${abs("/extension/")}): a creature on any website you visit\n- [For agents](${abs("/agents/")}): commands, JSON output, flags, exit codes\n- [Next.js guide](${abs("/nextjs/")})\n- [Astro guide](${abs("/astro/")})\n- [HTML, WordPress, Webflow, Shopify](${abs("/html/")})\n`);
+write("llms.txt", `${readFileSync("llms.txt", "utf8").trimEnd()}\n\n## Website\n\n- [Home](${abs("/")}): what it is, install, FAQ${LIVE ? `\n- [Browser extension](${abs("/extension/")}): a creature on any website you visit` : ""}\n- [For agents](${abs("/agents/")}): commands, JSON output, flags, exit codes\n- [Next.js guide](${abs("/nextjs/")})\n- [Astro guide](${abs("/astro/")})\n- [HTML, WordPress, Webflow, Shopify](${abs("/html/")})\n`);
 write("vercel-headers-check.txt", "ok\n");
 rmSync(join(OUT, "vercel-headers-check.txt"));
 

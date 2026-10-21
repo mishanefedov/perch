@@ -3,7 +3,7 @@
 // creature with the saved settings, opens the tuner panel on request, and saves what the panel changes.
 import { DEFAULTS, load, loadRule, perchOptions, save, saveRule } from "./settings";
 
-interface Opts { creature?: string | object; scale?: number; speed?: number; stickiness?: number; goal?: string; ignore?: string; topOffset?: number }
+interface Opts { creature?: string | object; scale?: number; speed?: number; stickiness?: number; goal?: string; ignore?: string; topOffset?: number; ask?: object }
 type PerchGlobal = { init(o: object): unknown; destroy(): void };
 type TunerGlobal = { mount(api: unknown, hooks: object): () => void };
 interface State { active: boolean; tunerMounted: boolean; listening: boolean; selfWrites: number }
@@ -34,7 +34,7 @@ function persist(opts: Opts) {
   };
   if (custom) global.custom = custom;
   st.selfWrites++; // our own saves must not restart the creature the tuner is showing
-  void Promise.all([save(global), saveRule(location.origin, { goal: opts.goal, ignore: opts.ignore, topOffset: opts.topOffset })])
+  void Promise.all([save(global), saveRule(location.origin, { goal: opts.goal, ignore: opts.ignore, topOffset: opts.topOffset, ask: opts.ask })])
     .finally(() => setTimeout(() => { st.selfWrites--; }, 700));
 }
 

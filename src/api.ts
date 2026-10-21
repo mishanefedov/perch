@@ -1,9 +1,10 @@
+import { validateAsk, type AskOptions } from "./ask";
 import { CREATURES, resolve, type PerchOptions } from "./config";
 import { validate, type CreatureSpec } from "./creature";
 import { start, type Handle } from "./engine";
 
-export type { PerchOptions, CreatureSpec, Handle };
-export { CREATURES, validate };
+export type { PerchOptions, CreatureSpec, Handle, AskOptions };
+export { CREATURES, validate, validateAsk };
 
 /** What the tuner panel needs from the library. */
 export interface PerchApi {
@@ -16,6 +17,8 @@ export interface PerchApi {
   /** a copy of a built-in creature, for editing */
   spec(name: string): CreatureSpec | undefined;
   debug(on: boolean): void;
+  /** show the question now (for trying it out) */
+  previewAsk(): void;
   creatures: string[];
 }
 
@@ -77,6 +80,12 @@ export function update(partial: PerchOptions): void {
     options = next;
     return;
   }
+  // a new question alone is swapped in place too: typing in the tuner must not restart the creature
+  if (current && keys.length === 1 && keys[0] === "ask") {
+    options = next;
+    current.setAsk(next.ask ?? null);
+    return;
+  }
   init(next);
 }
 
@@ -103,6 +112,7 @@ export const api: PerchApi = {
   },
   spec: (name) => (CREATURES[name] ? (JSON.parse(JSON.stringify(CREATURES[name])) as CreatureSpec) : undefined),
   debug,
+  previewAsk: () => current?.previewAsk(),
   creatures: Object.keys(CREATURES),
 };
 

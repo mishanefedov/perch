@@ -103,3 +103,37 @@ test("every built-in creature is valid and fits its grid", () => {
     for (const pose of Object.values(c.arms)) for (const [x, y] of pose) assert.ok(x < c.cols && y < c.rows, `${name}: arm pixel off the canvas`);
   }
 });
+
+test("set ask: valid JSON is stored on the tag, bad values are explained, an empty value removes it", async () => {
+  const dir = project(html);
+  await run([], dir, quiet);
+  const ask = JSON.stringify({ text: "Want a demo?", buttons: [{ label: "Yes", action: "link", value: "/demo" }, { label: "Later" }], delay: 3, once: "forever" });
+  await run(["set", `ask=${ask}`, "stickiness=0.8"], dir, quiet);
+  const opts = readOptions(detect(dir));
+  assert.deepEqual(JSON.parse(opts.ask), JSON.parse(ask));
+  assert.match(readFileSync(join(dir, "index.html"), "utf8"), /data-ask="\{&quot;text&quot;:&quot;Want a demo\?&quot;/);
+  await assert.rejects(run(["set", "ask=not json"], dir, quiet), /valid JSON/);
+  await assert.rejects(run(["set", 'ask={"text":""}'], dir, quiet), /text is required/);
+  await assert.rejects(run(["set", 'ask={"text":"x","buttons":[{"label":"a","action":"link","value":"javascript:alert(1)"}]}'], dir, quiet), /link must be/);
+  await assert.rejects(run(["set", 'ask={"text":"x","buttons":[{"label":"1"},{"label":"2"},{"label":"3"},{"label":"4"}]}'], dir, quiet), /at most 3 buttons/);
+  await run(["set", "ask="], dir, quiet);
+  assert.equal(readOptions(detect(dir)).ask, undefined, "ask= removes it");
+  assert.equal(readOptions(detect(dir)).stickiness, "0.8", "other options stay");
+});
+
+test("the CLI's ask rules and the library's validateAsk agree", async () => {
+  const { validateAsk } = await import("../dist/esm/index.js");
+  const { askProblems } = await import("../cli/run.mjs");
+  const samples = [
+    { text: "ok" }, { text: "" }, {}, null, { text: "x".repeat(201) },
+    { text: "a", buttons: [{ label: "b", action: "link", value: "https://x.com" }] },
+    { text: "a", buttons: [{ label: "b", action: "link", value: "javascript:1" }] },
+    { text: "a", buttons: [{ label: "b", action: "copy" }] },
+    { text: "a", buttons: [{ label: "b", action: "nope", value: "x" }] },
+    { text: "a", buttons: [{ label: "" }] },
+    { text: "a", buttons: [{ label: "1" }, { label: "2" }, { label: "3" }, { label: "4" }] },
+    { text: "a", delay: 70 }, { text: "a", delay: -1 }, { text: "a", once: "never" }, { text: "a", once: "forever", delay: 0 },
+    { text: "a", buttons: [{ label: "c", action: "scroll", value: "#pricing" }, { label: "d", action: "event", value: "open-chat" }, { label: "e" }] },
+  ];
+  for (const s of samples) assert.equal(validateAsk(s).length === 0, askProblems(s).length === 0, JSON.stringify(s));
+});

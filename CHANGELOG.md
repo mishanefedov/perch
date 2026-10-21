@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- **Ask**: the creature can ask visitors a question in a speech bubble (`ask` option, `data-ask`, `perch-pet set ask=...`, a section in the tuner with live preview). Up to three buttons: open a link, copy text, scroll to an element, click an element, send an event, or close. The creature stands still while the bubble is up, and scrolling closes it. In the extension the question is saved per site.
+- The site only promotes the browser extension once there is a Chrome Web Store link (`extension.chromeStoreUrl` in `site/config.json`). Until then the extension page says it is coming, is not indexed, and the zip sits under "For developers".
+- `perch.js` grew to 34 kB (13 kB gzipped).
+
 - **Browser extension** (`extension/`, Chrome and other Chromium browsers): puts the creature on any page. Toolbar popup (creature, size, speed, stickiness, show or hide, always on this site, on every site), keyboard shortcuts, and the full tuner panel on the page (swap, draw your own, show floors, pick goal and ignore). Creature and sliders are saved for every site, goal and ignore per site. Minimal permissions by default (`activeTab`); access to all sites is optional.
 - Website: `/extension/` page, privacy policy, a home page section, and the creature asks "Want me on every website?" in a speech bubble.
 
@@ -22,7 +26,7 @@
 
 First release.
 
-- One script (`perch.js`, about 10 kB gzipped) that finds headings, text lines, cards, buttons and forms and lets a pixel creature stand on them, ride them while you scroll, jump between them and point at the call to action.
+- One script (`perch.js`, about 13 kB gzipped) that finds headings, text lines, cards, buttons and forms and lets a pixel creature stand on them, ride them while you scroll, jump between them and point at the call to action.
 - Six creatures: octopus, blob, cat, ghost, robot, alien. Custom creatures as JSON.
 - Localhost tuner: swap creature, pixel editor, sliders, "show floors" overlay, click-to-pick goal and ignore selectors, copy-paste save command.
 - `npx perch-pet` setup for Next.js (app and pages router), Astro, SvelteKit, Nuxt, Vite and plain HTML. Also `set`, `creature`, `detect`, `options`, `--remove`, `--dry`.

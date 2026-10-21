@@ -2,6 +2,7 @@ import type { PerchApi } from "./api";
 import type { PerchOptions } from "./config";
 import { validate, type CreatureSpec } from "./creature";
 import { createEditor, EDITOR_CSS, type EditorHandle } from "./editor";
+import { ASK_ACTIONS, validateAsk, type AskAction, type AskOptions } from "./ask";
 import { countMatches, selectorFor } from "./selector";
 
 // The tuner: a small gear button on localhost. Change values, watch the creature react, see
@@ -10,6 +11,14 @@ import { countMatches, selectorFor } from "./selector";
 // on a live site (the main script only loads it on localhost or with ?perch=tune).
 
 const KEYS = ["creature", "stickiness", "speed", "scale", "goal", "ignore", "platforms", "topOffset", "mobile", "draggable", "bounce", "zIndex"] as const;
+const ACTION_LABELS: Record<AskAction, [string, string]> = {
+  link: ["Open link", "https://… or /path"],
+  copy: ["Copy text", "Text to copy"],
+  scroll: ["Scroll to", "CSS selector, e.g. #pricing"],
+  click: ["Click element", "CSS selector of the element"],
+  event: ["Send event", "Event name, e.g. open-chat"],
+  close: ["Just close", ""],
+};
 type Key = (typeof KEYS)[number];
 
 const CSS_TEXT = `
@@ -45,12 +54,19 @@ button.on { background: #dbeafe; border-color: #3b82f6; }
 .box { position: fixed; pointer-events: none; border: 2px solid #f59e0b; background: #f59e0b22; border-radius: 3px; z-index: 2; }
 .tip { position: fixed; left: 50%; top: 14px; transform: translateX(-50%); background: #111; color: #fff; padding: 6px 12px; border-radius: 8px; z-index: 3; }
 .copied { color: #15803d; }
+textarea.q { width: 100%; padding: 5px 7px; border: 1px solid #ccc; border-radius: 6px; background: #fff; color: #111; resize: vertical; }
+details.ask-sec { margin: 10px 0 0; border-top: 1px solid #0001; padding-top: 8px; }
+details.ask-sec > summary { cursor: pointer; font-weight: 600; margin-bottom: 6px; }
+.abtn { display: grid; grid-template-columns: 1fr 104px 24px; gap: 6px; margin: 6px 0; align-items: center; }
+.abtn .av { grid-column: 1 / 3; }
+.abtn .rm { border: 0; background: none; font-size: 18px; cursor: pointer; color: #888; border-radius: 6px; }
+.abtn .rm:hover { background: #0001; color: #000; }
 .match { grid-column: 2 / 4; margin: -4px 0 0; font-size: 12px; color: #666; min-height: 14px; }
 .match.warn { color: #b45309; } .match.bad { color: #b91c1c; }
 @media (prefers-color-scheme: dark) {
   .panel { background: #1b1b1d; color: #eee; border-color: #fff2; }
   .row label, .checks label { color: #ccc; } .val, .hint { color: #999; }
-  select, input[type=text], input[type=number], .out { background: #111; color: #eee; border-color: #444; }
+  select, input[type=text], input[type=number], .out, textarea.q { background: #111; color: #eee; border-color: #444; }
   button.b { background: #2a2a2d; color: #eee; border-color: #555; } button.b:hover { background: #38383c; }
   button.b.primary { background: #eee; color: #111; border-color: #eee; }
   button.on { background: #1e3a5f; border-color: #3b82f6; } .x { color: #aaa; } .x:hover { background: #333; } .sep { background: #fff2; }
@@ -65,12 +81,15 @@ const attr = (v: string) => v.replace(/&/g, "&amp;").replace(/"/g, "&quot;").rep
 /** The three ways to save the current values. Only values that differ from the defaults appear. */
 export function outputs(opts: PerchOptions) {
   const custom = typeof opts.creature === "object";
-  const entries = KEYS.filter((k) => opts[k] !== undefined && typeof opts[k] !== "object").map((k) => [k, String(opts[k])] as const);
+  const entries: (readonly [string, string])[] = [
+    ...KEYS.filter((k) => opts[k] !== undefined && typeof opts[k] !== "object").map((k) => [k, String(opts[k])] as const),
+    ...(opts.ask ? ([["ask", JSON.stringify(opts.ask)]] as const) : []),
+  ];
   const lines = [...(custom ? ["npx perch-pet creature ./creature.json"] : []), ...(entries.length ? ["npx perch-pet set " + entries.map(([k, v]) => `${k}=${shq(v)}`).join(" ")] : [])];
   const kebab = (k: string) => k.replace(/[A-Z]/g, (c) => "-" + c.toLowerCase());
   const tagAttrs = [...entries, ...(custom ? ([["creatureUrl", "/perch-creature.json"]] as const) : [])];
   const tag = `<script src="/perch.js"${tagAttrs.map(([k, v]) => ` data-${kebab(k)}="${attr(v)}"`).join("")} defer></script>`;
-  const json = JSON.stringify({ ...Object.fromEntries(entries.map(([k]) => [k, opts[k]])), ...(custom ? { creature: opts.creature } : {}) }, null, 2);
+  const json = JSON.stringify({ ...Object.fromEntries(entries.map(([k]) => [k, (opts as Record<string, unknown>)[k]])), ...(custom ? { creature: opts.creature } : {}) }, null, 2);
   return { command: lines.join("\n"), tag, json };
 }
 
@@ -114,6 +133,16 @@ export function mountTuner(api: PerchApi, hooks: TunerHooks = {}): () => void {
     <div class="row wide"><label for="goal">Goal</label><input id="goal" type="text" placeholder="auto"><button class="b" data-pick="goal" title="Click an element on the page">Pick</button><p class="match" data-match="goal"></p></div>
     <div class="row wide"><label for="ignore">Ignore</label><input id="ignore" type="text" placeholder="none"><button class="b" data-pick="ignore" title="Click an element on the page">Pick</button><p class="match" data-match="ignore"></p></div>
     <div class="row"><label for="topOffset">Top space</label><input id="topOffset" type="number" min="0" step="4" placeholder="auto"><span class="val">px</span></div>
+    <details class="ask-sec">
+      <summary>Ask visitors a question</summary>
+      <p class="hint" style="margin:0 0 6px">The creature stands still while the question is up. It goes away when the visitor scrolls.</p>
+      <textarea class="q" id="ask-text" rows="2" maxlength="200" placeholder="Want me on every website?" aria-label="Question"></textarea>
+      <div id="ask-buttons"></div>
+      <div class="btns"><button class="b" id="ask-add" type="button">+ Add button</button><button class="b" id="ask-preview" type="button">Preview</button><button class="b" id="ask-clear" type="button">Remove</button></div>
+      <div class="row"><label for="ask-delay">Delay</label><input id="ask-delay" type="number" min="0" max="60" step="1" placeholder="6"><span class="val">sec</span></div>
+      <div class="row wide"><label for="ask-once">Show</label><select id="ask-once"><option value="session">once per session</option><option value="forever">once ever</option><option value="always">every visit</option></select><span></span></div>
+      <p class="match bad" id="ask-err" style="grid-column:auto"></p>
+    </details>
     <div class="sep"></div>
     <textarea class="out" readonly aria-label="Command that saves these values"></textarea>
     <div class="btns">
@@ -161,6 +190,7 @@ export function mountTuner(api: PerchApi, hooks: TunerHooks = {}): () => void {
     }
     root.querySelectorAll<HTMLElement>(".val[data-for]").forEach((el) => { el.textContent = field(el.dataset.for!).value; });
     out.value = outputs(opts).command || "No changes from the defaults.";
+    fillAsk?.();
   };
 
   /** Stores a value, drops it when it equals the default, restarts the creature. */
@@ -253,6 +283,78 @@ export function mountTuner(api: PerchApi, hooks: TunerHooks = {}): () => void {
     hooks.onChange?.(opts);
   });
 
+  // ---- the question (ask) ----
+  const askText = $<HTMLTextAreaElement>("#ask-text"), askButtons = $<HTMLElement>("#ask-buttons"), askErr = $<HTMLElement>("#ask-err");
+  let lastAsk = "";
+  const optionsHtml = (a: AskAction) => ASK_ACTIONS.map((x) => `<option value="${x}"${x === a ? " selected" : ""}>${ACTION_LABELS[x][0]}</option>`).join("");
+  const addButtonRow = (b: { label?: string; action?: AskAction; value?: string } = {}) => {
+    const action = b.action ?? (b.value ? "link" : "link");
+    const row = document.createElement("div");
+    row.className = "abtn";
+    row.innerHTML = `<input class="al" type="text" maxlength="40" placeholder="Button text" aria-label="Button text"><select class="aa" aria-label="What the button does">${optionsHtml(action)}</select><button class="rm" type="button" aria-label="Remove button">×</button><input class="av" type="text" aria-label="Button value">`;
+    (row.querySelector(".al") as HTMLInputElement).value = b.label ?? "";
+    (row.querySelector(".av") as HTMLInputElement).value = b.value ?? "";
+    const fit = () => {
+      const a = (row.querySelector(".aa") as HTMLSelectElement).value as AskAction;
+      const v = row.querySelector(".av") as HTMLInputElement;
+      v.hidden = a === "close"; v.placeholder = ACTION_LABELS[a][1];
+    };
+    fit();
+    row.querySelector(".aa")!.addEventListener("change", () => { fit(); applyAsk(); });
+    row.querySelectorAll("input").forEach((i) => i.addEventListener("input", applyAsk));
+    row.querySelector(".rm")!.addEventListener("click", () => { row.remove(); applyAsk(); });
+    askButtons.appendChild(row);
+  };
+  const readAsk = (): AskOptions | undefined => {
+    const text = askText.value.trim();
+    if (!text) return undefined;
+    const buttons = [...askButtons.querySelectorAll<HTMLElement>(".abtn")].map((r) => {
+      const action = (r.querySelector(".aa") as HTMLSelectElement).value as AskAction;
+      const value = (r.querySelector(".av") as HTMLInputElement).value.trim();
+      return { label: (r.querySelector(".al") as HTMLInputElement).value.trim(), action, ...(action !== "close" ? { value } : {}) };
+    });
+    const delay = $<HTMLInputElement>("#ask-delay").value;
+    const once = $<HTMLSelectElement>("#ask-once").value as AskOptions["once"];
+    return { text, ...(buttons.length ? { buttons } : {}), ...(delay !== "" ? { delay: Number(delay) } : {}), ...(once !== "session" ? { once } : {}) };
+  };
+  const applyAsk = () => {
+    const next = readAsk();
+    const errs = next ? validateAsk(next) : [];
+    askErr.textContent = errs[0] ?? "";
+    if (errs.length) return; // keep typing: it applies as soon as it is valid
+    lastAsk = JSON.stringify(next ?? null);
+    const n = { ...opts };
+    if (next) n.ask = next; else delete n.ask;
+    opts = n;
+    api.update({ ask: next }); // swapped in place: the creature is not restarted
+    sync();
+    hooks.onChange?.(opts);
+  };
+  /** fill the form from the options, but not while the form itself is the source (that would move the cursor) */
+  const fillAsk = () => {
+    if (JSON.stringify(opts.ask ?? null) === lastAsk) return;
+    lastAsk = JSON.stringify(opts.ask ?? null);
+    const a = opts.ask;
+    askText.value = a?.text ?? "";
+    askButtons.textContent = "";
+    (a?.buttons ?? []).forEach((b) => addButtonRow(b));
+    $<HTMLInputElement>("#ask-delay").value = a?.delay === undefined ? "" : String(a.delay);
+    $<HTMLSelectElement>("#ask-once").value = a?.once ?? "session";
+    if (a) root.querySelector<HTMLDetailsElement>("details.ask-sec")!.open = true;
+  };
+  askText.addEventListener("input", applyAsk);
+  $<HTMLInputElement>("#ask-delay").addEventListener("input", applyAsk);
+  $<HTMLSelectElement>("#ask-once").addEventListener("change", applyAsk);
+  $<HTMLButtonElement>("#ask-add").addEventListener("click", () => {
+    if (askButtons.children.length >= 3) return;
+    if (!askText.value.trim()) askText.value = "Want to know more?";
+    addButtonRow({ label: "", action: "link" });
+    (askButtons.lastElementChild!.querySelector(".al") as HTMLInputElement).focus();
+  });
+  $<HTMLButtonElement>("#ask-preview").addEventListener("click", () => { applyAsk(); show(false); api.previewAsk(); });
+  $<HTMLButtonElement>("#ask-clear").addEventListener("click", () => { askText.value = ""; askButtons.textContent = ""; applyAsk(); });
+  fillAsk();
+
   // ---- the pixel editor ----
   const main = $<HTMLElement>(".main");
   let editor: EditorHandle | null = null;
@@ -291,7 +393,7 @@ export function mountTuner(api: PerchApi, hooks: TunerHooks = {}): () => void {
   if (hooks.extension) {
     out.hidden = true;
     root.querySelectorAll<HTMLElement>("[data-copy]").forEach((b) => { b.hidden = true; });
-    $<HTMLElement>(".hint").textContent = "Saved automatically. The creature and sliders apply to every site. Goal, ignore and top space apply to this site only. Floors are blue, the goal is green.";
+    $<HTMLElement>(".hint").textContent = "Saved automatically. The creature and sliders apply to every site. Goal, ignore, top space and the question apply to this site only. Floors are blue, the goal is green.";
   }
   if (hooks.gear === false) gear.hidden = true;
 

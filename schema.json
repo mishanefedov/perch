@@ -6,19 +6,157 @@
   "type": "object",
   "additionalProperties": false,
   "properties": {
-    "creature": { "enum": ["octopus", "blob", "cat", "ghost", "robot", "alien"], "default": "octopus", "description": "Built-in creature. For your own, use creatureUrl." },
-    "creatureUrl": { "type": "string", "description": "URL of a creature JSON file made in the tuner. `npx perch-pet creature ./creature.json` sets this up." },
-    "scale": { "type": "integer", "minimum": 1, "maximum": 8, "description": "Pixel size of one sprite pixel. Default 3 on desktop, 2 on phones." },
-    "stickiness": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.5, "description": "How long it stays on a spot before moving on. 0 restless, 1 stays long." },
-    "speed": { "type": "number", "minimum": 0.2, "maximum": 4, "default": 1, "description": "Walk speed multiplier." },
-    "goal": { "type": "string", "description": "CSS selector of the call to action it points at. Default: found automatically." },
-    "platforms": { "type": "string", "description": "Extra CSS selector for things it may stand on, added to the automatic ones." },
-    "ignore": { "type": "string", "description": "CSS selector for things it must never stand on or point at." },
-    "topOffset": { "type": "number", "minimum": 0, "description": "Pixels kept free at the top of the screen. Default: fixed headers are found automatically." },
-    "mobile": { "type": "boolean", "default": true, "description": "Run on phones and touch screens." },
-    "draggable": { "type": "boolean", "default": true, "description": "Let visitors drag and throw it." },
-    "bounce": { "type": "boolean", "default": true, "description": "Elements dip a few pixels when it lands on them." },
-    "zIndex": { "type": "integer", "default": 9999, "description": "CSS z-index of the creature layer." },
-    "tuner": { "type": "boolean", "description": "Script-tag only. Force the tuner panel on (true) or off (false). Default: on for localhost, off elsewhere." }
+    "creature": {
+      "enum": [
+        "octopus",
+        "blob",
+        "cat",
+        "ghost",
+        "robot",
+        "alien"
+      ],
+      "default": "octopus",
+      "description": "Built-in creature. For your own, use creatureUrl."
+    },
+    "creatureUrl": {
+      "type": "string",
+      "description": "URL of a creature JSON file made in the tuner. `npx perch-pet creature ./creature.json` sets this up."
+    },
+    "scale": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 8,
+      "description": "Pixel size of one sprite pixel. Default 3 on desktop, 2 on phones."
+    },
+    "stickiness": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "default": 0.5,
+      "description": "How long it stays on a spot before moving on. 0 restless, 1 stays long."
+    },
+    "speed": {
+      "type": "number",
+      "minimum": 0.2,
+      "maximum": 4,
+      "default": 1,
+      "description": "Walk speed multiplier."
+    },
+    "goal": {
+      "type": "string",
+      "description": "CSS selector of the call to action it points at. Default: found automatically."
+    },
+    "platforms": {
+      "type": "string",
+      "description": "Extra CSS selector for things it may stand on, added to the automatic ones."
+    },
+    "ignore": {
+      "type": "string",
+      "description": "CSS selector for things it must never stand on or point at."
+    },
+    "topOffset": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Pixels kept free at the top of the screen. Default: fixed headers are found automatically."
+    },
+    "mobile": {
+      "type": "boolean",
+      "default": true,
+      "description": "Run on phones and touch screens."
+    },
+    "draggable": {
+      "type": "boolean",
+      "default": true,
+      "description": "Let visitors drag and throw it."
+    },
+    "bounce": {
+      "type": "boolean",
+      "default": true,
+      "description": "Elements dip a few pixels when it lands on them."
+    },
+    "zIndex": {
+      "type": "integer",
+      "default": 9999,
+      "description": "CSS z-index of the creature layer."
+    },
+    "tuner": {
+      "type": "boolean",
+      "description": "Script-tag only. Force the tuner panel on (true) or off (false). Default: on for localhost, off elsewhere."
+    },
+    "ask": {
+      "type": "object",
+      "description": "The creature asks the visitor a question in a speech bubble. While it is up the creature stands still, and it goes away when the visitor scrolls. As a data attribute: data-ask='{\"text\":\"...\",\"buttons\":[...]}'.",
+      "additionalProperties": false,
+      "required": [
+        "text"
+      ],
+      "properties": {
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "description": "The question."
+        },
+        "buttons": {
+          "type": "array",
+          "maxItems": 3,
+          "description": "Up to three buttons. The first one is highlighted.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "label"
+            ],
+            "properties": {
+              "label": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 40
+              },
+              "action": {
+                "enum": [
+                  "link",
+                  "copy",
+                  "scroll",
+                  "click",
+                  "event",
+                  "close"
+                ],
+                "description": "link: open a URL. copy: copy text. scroll: scroll to a selector. click: click an element. event: send a window event. close: just close. Default: link when there is a value, else close."
+              },
+              "value": {
+                "type": "string",
+                "maxLength": 500,
+                "description": "link: the URL (http, https, mailto, tel or a relative path). copy: the text. scroll and click: a CSS selector. event: the event name."
+              },
+              "newTab": {
+                "type": "boolean",
+                "description": "link only: open in a new tab."
+              }
+            }
+          }
+        },
+        "delay": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 60,
+          "default": 6,
+          "description": "Seconds on the page before it shows."
+        },
+        "once": {
+          "enum": [
+            "session",
+            "forever",
+            "always"
+          ],
+          "default": "session",
+          "description": "How often one visitor sees it: once per browser session, once ever, or on every visit."
+        },
+        "id": {
+          "type": "string",
+          "description": "Remembers that it was seen under this name. Default: made from the text and buttons."
+        }
+      }
+    }
   }
 }
