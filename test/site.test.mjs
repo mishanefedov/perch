@@ -20,40 +20,44 @@ function build(store) {
   return { read, exists: (p) => existsSync(join(out, p)) };
 }
 
-test("site without a store link: the extension is still promoted, the page shows the install steps right away", { skip: !ready }, () => {
+test("site while the store listing is in review: it says so, the install is right there, nothing redirects", { skip: !ready }, () => {
   const site = build("");
   const home = site.read("index.html");
-  assert.match(home, /id="extension"/, "extension section on the home page");
-  assert.match(home, /href="\/extension\/#install"[^>]*>Get the extension/, "its button opens the install steps");
-  assert.match(home, /href="\/extension\/">Extension/, "nav link");
+  assert.match(home, /id="extension"/);
+  assert.match(home, /Chrome Web Store: in review/, "says plainly what is going on");
+  assert.match(home, /<details class="now">/, "the one-minute install is on the home page");
+  assert.doesNotMatch(home, /<a[^>]*>Add to Chrome/, "no button that cannot work yet");
+  assert.match(home, /href="#extension">get the browser extension/, "the hero link scrolls, it does not navigate");
   const ask = JSON.parse(home.match(/data-ask="([^"]*)"/)[1].replace(/&quot;/g, '"'));
-  assert.equal(ask.text, "Want me on every website?", "the creature asks about the extension by default");
-  assert.equal(ask.buttons[0].value, "/extension/#install");
+  assert.equal(ask.text, "Want me on every website?");
+  assert.equal(ask.buttons[0].value, "/#extension", "the question goes straight to the section, not through another page");
   const page = site.read("extension/index.html");
+  assert.match(page, /<details class="now" open>/, "on the extension page the steps are already open");
+  assert.match(page, /Chrome Web Store: in review/);
   assert.doesNotMatch(page, /noindex/);
-  assert.doesNotMatch(page, /Add to Chrome/);
-  assert.match(page, /<ol id="manual">/, "the install steps are visible, not hidden");
   assert.match(site.read("sitemap.xml"), /\/extension\/<\/loc>/);
-  assert.match(site.read("llms.txt"), /Browser extension/);
   assert.ok(site.exists("perch-extension.zip"));
 });
 
-test("site with a store link: Add to Chrome everywhere, the creature asks about it, page is indexed", { skip: !ready }, () => {
-  const url = "https://chromewebstore.google.com/detail/perch/abcdef";
+test("site once the listing is live: Add to Chrome everywhere, the question opens the store", { skip: !ready }, () => {
+  const url = "https://chromewebstore.google.com/detail/perch/abcdefghijklmnopabcdefghijklmnop";
   const site = build(url);
   const home = site.read("index.html");
-  assert.match(home, /id="extension"/);
   assert.match(home, new RegExp(`href="${url}"[^>]*>Add to Chrome`));
+  assert.doesNotMatch(home, /in review/);
   const ask = JSON.parse(home.match(/data-ask="([^"]*)"/)[1].replace(/&quot;/g, '"'));
-  assert.equal(ask.text, "Want me on every website?");
-  assert.equal(ask.buttons[0].value, url, "the question opens the store listing");
+  assert.equal(ask.buttons[0].value, url);
   assert.equal(ask.buttons[0].newTab, true);
-  assert.match(home, /href="\/extension\/">Extension/);
-  assert.doesNotMatch(site.read("extension/index.html"), /<ol id="manual">/, "with a store link the page leads with Add to Chrome and the source install is tucked away");
   const page = site.read("extension/index.html");
-  assert.doesNotMatch(page, /noindex/);
   assert.match(page, new RegExp(`href="${url}"[^>]*>Add to Chrome`));
   assert.match(page, /"@type":"SoftwareApplication"/);
-  assert.match(site.read("sitemap.xml"), /\/extension\/<\/loc>/);
-  assert.match(site.read("llms.txt"), /Browser extension/);
+});
+
+test("status live plus an item id gives the public store URL", { skip: !ready }, () => {
+  const out = mkdtempSync(join(tmpdir(), "perch-site-"));
+  const id = "abcdefghijklmnopabcdefghijklmnop";
+  const env = { ...process.env, SITE_OUT: out, SITE_URL: "https://example.test", EXTENSION_STORE_ID: id, EXTENSION_STATUS: "live" };
+  delete env.EXTENSION_STORE_URL;
+  execFileSync("bun", ["run", "scripts/build-site.ts"], { cwd: root, env, stdio: "ignore" });
+  assert.match(readFileSync(join(out, "index.html"), "utf8"), new RegExp(`href="https://chromewebstore.google.com/detail/${id}"[^>]*>Add to Chrome`));
 });

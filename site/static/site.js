@@ -18,4 +18,13 @@
       chips.forEach(function (c) { c.setAttribute("aria-pressed", String(c === b)); });
     });
   });
+
+  // a link to #extension (the creature's question) opens the install steps right there
+  function openInstall() {
+    if (location.hash !== "#extension" && location.hash !== "#install") return;
+    var d = document.querySelector("#extension details.now, #ext-install details.now, .ext-install details.now");
+    if (d) d.open = true;
+  }
+  addEventListener("hashchange", openInstall);
+  openInstall();
 })();

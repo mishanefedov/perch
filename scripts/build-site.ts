@@ -4,7 +4,7 @@
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-const cfg = JSON.parse(readFileSync("site/config.json", "utf8")) as { url: string; name: string; github: string; npm: string; extension: { chromeStoreUrl: string; zip: string } };
+const cfg = JSON.parse(readFileSync("site/config.json", "utf8")) as { url: string; name: string; github: string; npm: string; extension: { chromeStoreUrl: string; chromeStoreId: string; status: "review" | "live"; zip: string } };
 const EXT_VERSION = (JSON.parse(readFileSync("extension/manifest.json", "utf8")) as { version: string }).version;
 // SITE_URL wins; on Vercel the production domain (your custom domain once attached) is used; else config.json
 const vercelUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : "";
@@ -37,14 +37,23 @@ const pages: Page[] = [];
 // "Add to Chrome" once the store URL is in site/config.json, else the beta download
 // The extension is promoted only when it can really be installed: when there is a Chrome Web Store link.
 // Until then nothing on the site sends people to a download. Set it in site/config.json (extension.chromeStoreUrl).
-const STORE = process.env.EXTENSION_STORE_URL ?? cfg.extension.chromeStoreUrl;
+const EXT_ID = process.env.EXTENSION_STORE_ID ?? cfg.extension.chromeStoreId ?? "";
+const EXT_STATUS = process.env.EXTENSION_STATUS ?? cfg.extension.status;
+// "live" with an item id gives the public listing URL. In review the listing page does not work yet, so nothing links to it.
+const STORE = process.env.EXTENSION_STORE_URL ?? (cfg.extension.chromeStoreUrl || (EXT_STATUS === "live" && EXT_ID ? `https://chromewebstore.google.com/detail/${EXT_ID}` : ""));
 const LIVE = !!STORE;
 
 // the creature on this site asks about the extension (it uses the Ask feature of the library); the button opens the store listing, or the install steps until there is one
-const ASK = { text: "Want me on every website?", buttons: [{ label: "Get the extension", action: "link", value: STORE || "/extension/#install", ...(STORE ? { newTab: true } : {}) }], delay: 7 };
-const extButton = (cls = "btn primary") => STORE
-  ? `<a class="${cls}" href="${STORE}" rel="noopener">Add to Chrome</a>`
-  : `<a class="${cls}" href="/extension/#install">Get the extension</a>`;
+const ASK = { text: "Want me on every website?", buttons: [{ label: "Get the extension", action: "link", value: STORE || "/#extension", ...(STORE ? { newTab: true } : {}) }], delay: 7 };
+const SOURCE_STEPS = `<ol class="mini">
+<li><a href="${cfg.extension.zip}" download>Download perch-extension.zip</a> and unzip it.</li>
+<li>Open <code>chrome://extensions</code> and switch on <strong>Developer mode</strong> (top right).</li>
+<li>Press <strong>Load unpacked</strong>, choose the unzipped folder, pin the Perch icon and click it on any site.</li>
+</ol>`;
+/** One place that says what is going on. In review: the status and a one-minute install. Live: Add to Chrome. */
+const installCard = (open: boolean) => STORE
+  ? `<div class="ext-install"><p style="margin:0 0 8px"><a class="btn primary big" href="${STORE}" rel="noopener">Add to Chrome</a></p><p class="fine" style="margin:0 0 10px;color:var(--muted)">Free. Works in Chrome, Edge, Brave and Arc.</p><details class="now"><summary>Install from source instead</summary>${SOURCE_STEPS}</details></div>`
+  : `<div class="ext-install"><p class="status"><span class="dot" aria-hidden="true"></span><span><strong>Chrome Web Store: in review.</strong> One-click “Add to Chrome” appears here as soon as Google approves it.</span></p><details class="now"${open ? " open" : ""}><summary class="btn primary">Install it now (1 minute)</summary>${SOURCE_STEPS}</details></div>`;
 
 function layout(p: Page): string {
   const url = abs(p.path);
@@ -129,7 +138,7 @@ const FAQ: [string, string][] = [
   ["What is Perch?", "Perch is a free, open-source pixel creature for websites. One script makes a small animated mascot that stands on your real headings, text and buttons, rides them while visitors scroll, and points at your call to action."],
   ["How do I add a mascot to my website?", "Run npx perch-pet in your project folder. It finds your layout file, copies the script into your public folder and adds one script tag. Without a repo, paste one script tag before the closing body tag."],
   ["Does Perch work with Next.js, Astro, SvelteKit, Nuxt and Vite?", "Yes. The setup command edits the right file for Next.js (app and pages router, including route groups), Astro, SvelteKit, Nuxt, Vite and plain HTML. For anything else, such as WordPress, Webflow or Shopify, paste the script tag."],
-  ["Will it slow down my site?", "The script is about 27 kB, 13 kB gzipped. It draws one small canvas, pauses in background tabs, adds no layout shift and makes no network requests. The tuner panel is a separate file that only loads on localhost (and on this demo site)."],
+  ["Will it slow down my site?", "The script is about 34 kB, 13 kB gzipped. It draws one small canvas, pauses in background tabs, adds no layout shift and makes no network requests. The tuner panel is a separate file that only loads on localhost (and on this demo site)."],
   ["Does it track my visitors?", "No. There is no tracking and no analytics. The only request it can make is one optional fetch of your own creature file."],
   ["Can I make my own character?", "Yes. On localhost, the tuner has a pixel editor for the body, legs, arms, colors and eyes. Download the JSON and run npx perch-pet creature ./creature.json."],
   ["Does it work on phones?", "Yes. It uses a smaller size on touch screens and follows taps and scrolling. You can turn it off on phones with data-mobile=\"false\"."],
@@ -168,7 +177,7 @@ pages.push({
     <button type="button" class="btn" data-open-tuner>Open the tuner on this page</button>
   </div>
   <p class="fine">Next.js · Astro · SvelteKit · Nuxt · Vite · plain HTML · 13 kB gzipped · no tracking</p>
-  <p class="fine" style="margin-top:6px">Or put it on any website you visit: <a href="/extension/">get the browser extension</a></p>
+  <p class="fine" style="margin-top:6px">Or put it on any website you visit: <a href="#extension">get the browser extension</a></p>
   <div class="hero-art"><img src="/assets/hero.svg" width="960" height="300" alt="A pixel octopus hopping between a heading, text lines, a card and a button on a web page"></div>
   <div class="chips" role="group" aria-label="Try another creature on this page">Try another one on this page:
     ${["octopus", "blob", "cat", "ghost", "robot", "alien"].map((c) => `<button type="button" data-creature="${c}" aria-pressed="${c === "octopus"}">${c}</button>`).join("\n    ")}
@@ -222,7 +231,8 @@ pages.push({
       <h2>Want it on any website?</h2>
       <p class="sub" style="margin-bottom:18px">The Perch extension puts a creature on the pages you visit. Draw your own, choose the call to action and the things to ignore for each site, and hide it with one key.</p>
       <ul class="tick"><li>One click on the toolbar icon, or <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd></li><li>The same tuner panel as here, saved in your browser</li><li>Asks for access to one tab, not every site, unless you choose so</li></ul>
-      <p style="margin:22px 0 0">${extButton()} <a class="btn" href="/extension/">How it works</a></p>
+      <div style="margin-top:22px">${installCard(false)}</div>
+      <p class="fine" style="margin-top:14px"><a href="/extension/">How it works and what it can see</a></p>
     </div>
     <img src="/assets/ext-page.png" loading="lazy" width="1280" height="800" alt="A web page with a pixel creature on it and the Perch customize panel open in the browser extension">
   </div>
@@ -397,21 +407,7 @@ pages.push({
 <h1>Put a pixel creature on any website you visit</h1>
 <p>The Perch extension runs the same creature as the <a href="/">library</a> on the pages you open. It stands on the page's real headings, text and buttons, rides them while you scroll, and points at the main button. Free and open source.</p>
 <h2 id="install">Install</h2>
-${LIVE ? `<p>${extButton("btn primary")}</p><p class="fine" style="color:var(--muted)">Works in Chrome and other Chromium browsers (Edge, Brave, Arc).</p>
-<details id="manual"><summary>Install from source instead (developers)</summary>
-<ol>
-<li><a href="${cfg.extension.zip}" download>Download perch-extension.zip</a> (v${EXT_VERSION}) and unzip it.</li>
-<li>Open <code>chrome://extensions</code> and switch on <strong>Developer mode</strong> (top right).</li>
-<li>Press <strong>Load unpacked</strong> and choose the unzipped folder.</li>
-</ol>
-</details>` : `<p>The Chrome Web Store listing is not live yet. Until it is, you can install the extension yourself in about a minute:</p>
-<ol id="manual">
-<li><a class="btn primary" href="${cfg.extension.zip}" download>Download perch-extension.zip</a> (v${EXT_VERSION}) and unzip it.</li>
-<li>Open <code>chrome://extensions</code> and switch on <strong>Developer mode</strong> (top right).</li>
-<li>Press <strong>Load unpacked</strong> and choose the unzipped folder.</li>
-<li>Pin the Perch icon from the puzzle-piece menu, open any website and click it.</li>
-</ol>
-<p class="fine" style="color:var(--muted)">Works in Chrome and other Chromium browsers (Edge, Brave, Arc). Firefox and Safari are not supported yet. Watch <a href="${cfg.github}">the repository</a> (Watch, Custom, Releases) to hear when the store listing goes live.</p>`}
+${installCard(true)}
 <h2>How it works</h2>
 <ol>
 <li><strong>Click the icon, press Show on this page.</strong> The creature lands on the page and goes to the main button. Press <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd> to show or hide it.</li>

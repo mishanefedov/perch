@@ -106,3 +106,17 @@ footer a { color: var(--muted); } footer a:hover { color: var(--text); }
 kbd { font: 600 13px var(--mono); background: #1a2347; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 6px; padding: 1px 6px; color: #fff; }
 table.perm { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 16px; }
 table.perm th, table.perm td { text-align: left; border-bottom: 1px solid var(--line); padding: 10px 12px 10px 0; vertical-align: top; color: #c9d2ef; } table.perm th { color: var(--muted); font-weight: 600; }
+
+/* the extension install card: one place that says what is going on */
+.ext-install .status { display: flex; gap: 10px; align-items: flex-start; margin: 0 0 14px; color: #e8dcb8; font-size: 16px; line-height: 1.45; }
+.ext-install .dot { flex: none; width: 10px; height: 10px; margin-top: 7px; border-radius: 50%; background: #f59e0b; animation: pulse 1.8s ease-in-out infinite; }
+@keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 #f59e0b66; } 50% { box-shadow: 0 0 0 7px #f59e0b00; } }
+@media (prefers-reduced-motion: reduce) { .ext-install .dot { animation: none; } }
+details.now { border: 0; padding: 0; }
+details.now > summary { list-style: none; cursor: pointer; }
+details.now > summary::before { content: none; }
+details.now > summary:not(.btn) { color: var(--blue); font-size: 15px; }
+details.now[open] > summary.btn { margin-bottom: 14px; }
+ol.mini { margin: 10px 0 0 20px; padding: 0; color: #c9d2ef; font-size: 16px; }
+ol.mini li { margin: 6px 0; }
+.btn.big { font-size: 19px; padding: 14px 24px; }
